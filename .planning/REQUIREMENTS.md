@@ -49,20 +49,20 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHEMA-01 | — | Pending |
-| SCHEMA-02 | — | Pending |
-| STARTUP-01 | — | Pending |
-| STARTUP-02 | — | Pending |
-| STARTUP-03 | — | Pending |
-| TOOLS-01 | — | Pending |
-| TOOLS-02 | — | Pending |
-| VALID-01 | — | Pending |
+| SCHEMA-01 | Phase 1 | Pending |
+| SCHEMA-02 | Phase 1 | Pending |
+| STARTUP-01 | Phase 2 | Pending |
+| STARTUP-02 | Phase 2 | Pending |
+| STARTUP-03 | Phase 2 | Pending |
+| TOOLS-01 | Phase 2 | Pending |
+| TOOLS-02 | Phase 3 | Pending |
+| VALID-01 | Phase 3 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 8 total
-- Mapped to phases: 0
-- Unmapped: 8
+- Mapped to phases: 8
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-18*
-*Last updated: 2026-04-18 — Milestone v1.0 defined*
+*Last updated: 2026-04-18 — Traceability mapped (roadmap v1.0, 3 phases)*
