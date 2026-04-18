@@ -116,11 +116,16 @@ A developer can start an AI coding session on their machine and seamlessly conti
 
 ### Active
 
-(To be defined — what new features or changes are planned for this fork)
+**MCP Tool Configuration (v1.0)**
+- Allow users to configure which tools the happier MCP bridge exposes via `~/.happier-dev/settings.json`
+- Per-tool enable/disable switches for the MCP surface
+- CLI reads and applies tool filter config at MCP server startup
 
 ### Out of Scope
 
-(To be defined)
+- Per-project `.mcp.json` overrides (deferred — user-global settings first)
+- Remote/server-side tool configuration
+- UI for editing settings (hand-edit only for v1.0)
 
 ## Context
 
@@ -166,4 +171,14 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-18 after initialization*
+## Current Milestone: v1.0 MCP Tool Configuration
+
+**Goal:** Allow users to configure which tools the happier MCP bridge exposes via a persistent settings JSON file at `~/.happier-dev/settings.json`.
+
+**Target features:**
+- Per-tool enable/disable switches for the MCP bridge surface in `~/.happier-dev/settings.json`
+- CLI reads and applies tool filter config at MCP server startup
+- Settings file format that is easy to hand-edit
+
+---
+*Last updated: 2026-04-18 — Milestone v1.0 started*
