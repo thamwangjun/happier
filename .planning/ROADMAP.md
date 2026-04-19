@@ -51,11 +51,14 @@ Plans:
 **Goal**: The startup log tells developers which tool names in their config are unrecognized, preventing silent misconfiguration
 **Depends on**: Phase 2
 **Requirements**: TOOLS-02, VALID-01
-**Plans**: TBD
+**Plans**: 1 plan
 **Success Criteria** (what must be TRUE):
   1. A developer who misspells a tool name (e.g., `change-title` instead of `change_title`) sees a `warn`-level log entry at startup identifying the unrecognized name
   2. A config containing only valid tool names produces no warning log entries related to unknown names
   3. Unknown tool names do not prevent startup or alter the behavior of correctly-named entries
+
+Plans:
+- [ ] 03-01-PLAN.md — Add findUnknownSessionAgentToolNames, wire logger.warn call site in startHappyServer, add unit and integration tests
 
 ## Progress
 
@@ -66,4 +69,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Schema & Reader | 0/1 | Not started | - |
 | 2. Startup Wiring & Tool Filtering | 0/3 | Not started | - |
-| 3. Validation Feedback | 0/TBD | Not started | - |
+| 3. Validation Feedback | 0/1 | Not started | - |
