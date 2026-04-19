@@ -116,10 +116,15 @@ A developer can start an AI coding session on their machine and seamlessly conti
 
 ### Active
 
+*All v1.0 milestone requirements validated. Milestone complete.*
+
+### Recently Validated
+
 **MCP Tool Configuration (v1.0)**
-- Allow users to configure which tools the happier MCP bridge exposes via `~/.happier-dev/settings.json`
-- Per-tool enable/disable switches for the MCP surface
-- CLI reads and applies tool filter config at MCP server startup
+- Allow users to configure which tools the happier MCP bridge exposes via `~/.happier-dev/settings.json` — Validated in Phase 1
+- Per-tool enable/disable switches for the MCP surface — Validated in Phase 1
+- CLI reads and applies tool filter config at MCP server startup — Validated in Phase 2
+- Startup validation feedback: unknown tool names produce warn-level log; valid configs stay noise-free — Validated in Phase 3 (TOOLS-02, VALID-01)
 
 ### Out of Scope
 
@@ -181,4 +186,4 @@ This document evolves at phase transitions and milestone boundaries.
 - Settings file format that is easy to hand-edit
 
 ---
-*Last updated: 2026-04-18 — Milestone v1.0 started*
+*Last updated: 2026-04-19 — Phase 3 complete, Milestone v1.0 all phases done*
