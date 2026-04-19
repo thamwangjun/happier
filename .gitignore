@@ -55,7 +55,10 @@ apps/server/output/
 *.tsbuildinfo
 packages/protocol/src/features/embeddedFeaturePolicies.generated.ts
 
-.claude/settings.local.json
+.claude/
+!.claude/settings.json
+!.claude/CLAUDE.md
+!.claude/skills/
 .plan
 
 CLAUDE.local.md
@@ -82,9 +85,6 @@ notes/
 .project/qa/score-history/
 .happier/local/
 /output
-
-# Claude Code cache
-.claude/cache/
 
 # Android build artifacts
 packages/*/android/build/
