@@ -342,6 +342,65 @@ describe('createHappierMcpServer', () => {
     expect(updateMetadata).toHaveBeenCalledTimes(1);
   });
 
+  it('forwards isSessionAgentToolEnabled to registerHappierMcpBuiltInTools when provided', async () => {
+    const capturedParams: { isSessionAgentToolEnabled?: unknown } = {};
+
+    vi.doMock('@/mcp/server/registerHappierMcpBuiltInTools', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@/mcp/server/registerHappierMcpBuiltInTools')>();
+      return {
+        ...actual,
+        registerHappierMcpBuiltInTools: (_server: any, params: any) => {
+          capturedParams.isSessionAgentToolEnabled = params.isSessionAgentToolEnabled;
+          return { toolNames: [] };
+        },
+      };
+    });
+
+    const { createHappierMcpServer } = await import('@/mcp/createHappierMcpServer');
+    const predicate = (name: string) => name !== 'change_title';
+
+    createHappierMcpServer(
+      {
+        sessionId: 'sess_predicate_forwarding_1',
+        rpcHandlerManager: { invokeLocal: async () => ({}) },
+        sendClaudeSessionMessage: () => {},
+        updateMetadata: () => {},
+      } as any,
+      { credentials: null, isSessionAgentToolEnabled: predicate },
+    );
+
+    expect(capturedParams.isSessionAgentToolEnabled).toBe(predicate);
+  });
+
+  it('passes undefined isSessionAgentToolEnabled to registerHappierMcpBuiltInTools when opts omits it', async () => {
+    const capturedParams: { isSessionAgentToolEnabled?: unknown } = {};
+
+    vi.doMock('@/mcp/server/registerHappierMcpBuiltInTools', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('@/mcp/server/registerHappierMcpBuiltInTools')>();
+      return {
+        ...actual,
+        registerHappierMcpBuiltInTools: (_server: any, params: any) => {
+          capturedParams.isSessionAgentToolEnabled = params.isSessionAgentToolEnabled;
+          return { toolNames: [] };
+        },
+      };
+    });
+
+    const { createHappierMcpServer } = await import('@/mcp/createHappierMcpServer');
+
+    createHappierMcpServer(
+      {
+        sessionId: 'sess_predicate_absent_1',
+        rpcHandlerManager: { invokeLocal: async () => ({}) },
+        sendClaudeSessionMessage: () => {},
+        updateMetadata: () => {},
+      } as any,
+      { credentials: null },
+    );
+
+    expect(capturedParams.isSessionAgentToolEnabled).toBeUndefined();
+  });
+
   it('routes execution_run_start through the action executor (so approvals/enablement apply)', async () => {
     const execute = vi.fn(async () => ({ ok: true, result: { ok: true } }));
     const captured: { deps?: any } = {};

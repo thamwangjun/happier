@@ -25,7 +25,10 @@ import { MemorySearchResultV1Schema, MemoryWindowV1Schema, type MemorySearchResu
 
 export function createHappierMcpServer(
   client: HappyMcpSessionClient,
-  opts?: Readonly<{ credentials?: Credentials | null }>,
+  opts?: Readonly<{
+      credentials?: Credentials | null;
+      isSessionAgentToolEnabled?: (toolName: string) => boolean;
+  }>,
 ): { mcp: McpServer; toolNames: string[] } {
   // This server is the per-session MCP bridge that a running session agent uses.
   // It must use the `session_agent` surface so action enablement + approvals can be
@@ -156,6 +159,7 @@ export function createHappierMcpServer(
 
   const executor = harness.executor;
 
+  // resources use their own isActionEnabled callback — not subject to sessionAgentToolsSettingsV1 filtering
   registerHappierMcpResources(mcp as any, {
     surface: toolSurface,
     isActionEnabled: (id) => isActionEnabledByEnv(id, { surface: toolSurface }),
@@ -173,6 +177,7 @@ export function createHappierMcpServer(
   const { toolNames } = registerHappierMcpBuiltInTools(mcp as any, {
     sessionId: client.sessionId,
     surface: toolSurface,
+    isSessionAgentToolEnabled: opts?.isSessionAgentToolEnabled,
     deps: {
       changeTitle: createChangeTitleToolHandler({
         executor,

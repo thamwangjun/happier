@@ -8,6 +8,8 @@ import type { RpcHandlerManagerLike } from "@/api/rpc/types";
 import type { Metadata } from "@/api/types";
 import { configuration } from "@/configuration";
 import type { Credentials } from '@/persistence';
+import { readSettings } from '@/persistence';
+import { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled } from '@/settings/sessionAgentToolsSettings';
 import type { ExecutionRunServiceResult } from "@/session/services/executionRuns";
 
 export type HappyMcpExecutionRunService = Readonly<{
@@ -33,9 +35,15 @@ export async function startHappyServer(
     client: HappyMcpSessionClient,
     opts?: Readonly<{ credentials?: Credentials | null }>,
 ) {
-    // Do not eagerly construct an MCP server on startup; only snapshot the names.
-    // Full server creation is done per request inside the handler.
-    const toolNamesSnapshot = listBuiltInHappierTools({ surface: 'session_agent' }).map((tool) => tool.name);
+    // Read settings once at startup (STARTUP-01); predicate is computed here and reused per-request.
+    const settings = await readSettings();
+    const toolsSettings = readSessionAgentToolsSettingsV1(settings);
+    const isSessionAgentToolEnabled = buildIsSessionAgentToolEnabled(toolsSettings);
+
+    // Snapshot filtered toolNames at startup — only enabled tools (D-06).
+    const toolNamesSnapshot = listBuiltInHappierTools({ surface: 'session_agent' })
+        .filter((tool) => isSessionAgentToolEnabled(tool.name))
+        .map((tool) => tool.name);
     const keepAliveIntervalMs = configuration.mcpSseKeepAliveIntervalMs;
 
     //
@@ -56,6 +64,7 @@ export async function startHappyServer(
         // one transport across requests can surface as client-side "Error POSTing to endpoint".
         const { mcp } = createHappierMcpServer(client, {
             credentials: opts?.credentials ?? null,
+            isSessionAgentToolEnabled,      // computed once above; reused per request (D-04)
         });
 
         const transport = new StreamableHTTPServerTransport({
