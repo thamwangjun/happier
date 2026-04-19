@@ -44,7 +44,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Rename sweep: mcpToolsSettingsV1 → sessionAgentToolsSettingsV1 across all Phase 1 artifacts; add buildIsSessionAgentToolEnabled predicate builder
-- [ ] 02-02-PLAN.md — Predicate threading: startHappyServer reads settings once, createHappierMcpServer extends opts, registerHappierMcpBuiltInTools applies filter; unit tests
+- [x] 02-02-PLAN.md — Predicate threading: startHappyServer reads settings once, createHappierMcpServer extends opts, registerHappierMcpBuiltInTools applies filter; unit tests
 - [ ] 02-03-PLAN.md — Integration test coverage: end-to-end TOOLS-01 and STARTUP-02 verification via real MCP server + listTools
 
 ### Phase 3: Validation Feedback
