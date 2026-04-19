@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { request as httpRequest } from 'node:http';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
