@@ -8,10 +8,10 @@
 
 ### Turn Completion Distinction
 
-- [ ] **TURN-01**: `finalizeCurrentTurn()` in `claudeRemoteAgentSdk.ts` accepts `isSubagent?: boolean` in its params bag (backward-compatible with all existing call sites)
+- [x] **TURN-01**: `claudeRemoteAgentSdk.ts` exposes two distinct closures for turn completion: `finalizeCurrentTurn()` for the parent path (all Phase A + Phase B logic, `params?: { completionEvent?: string }`) and `finalizeSubagentTurn()` for the subagent path (Phase A bookkeeping only). All existing call sites of `finalizeCurrentTurn()` remain unchanged.
 - [ ] **TURN-02**: Phase A bookkeeping (`activeTaskId = null`, `updateThinking(false)`, transcript flush, diagnostics reset) runs for both parent and subagent completions
 - [ ] **TURN-03**: Phase B notification (`didFinalizeTurn = true`, `awaitingNextTurnStart = true`, `opts.onReady()`, `scheduleNextMessagePump()`) runs only when `!isSubagent`
-- [ ] **TURN-04**: `task_notification` call site passes `{ isSubagent: true }`; `result` and compact call sites pass `{}` (falsy default, treated as parent)
+- [x] **TURN-04**: The `task_notification` handler calls `finalizeSubagentTurn()` directly. The `result` and compact call sites call `finalizeCurrentTurn()` (with optional `completionEvent`). No `isSubagent` flag is passed at any call site.
 
 ### Correctness / Regression
 
@@ -26,8 +26,7 @@
 
 ## Future Requirements
 
-- Dedicated subagent handler function (Codex-style `finalizeSyntheticSubagentThread`) if agent-teams becomes a primary code path
-- `resetTurnDiagnostics()` scope decision: gate behind `!isSubagent` for full-turn diagnostics
+- `resetTurnDiagnostics()` scope decision: gate behind subagent check for full-turn diagnostics (see `didFlushTranscriptCleanly` advisory in 04-VERIFICATION.md)
 
 ## Out of Scope
 
@@ -41,15 +40,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TURN-01 | Phase 4 | Pending |
-| TURN-02 | Phase 4 | Pending |
-| TURN-03 | Phase 4 | Pending |
-| TURN-04 | Phase 5 | Pending |
-| TURN-05 | Phase 4 | Pending |
+| TURN-01 | Phase 4 | Done |
+| TURN-02 | Phase 4 | Done |
+| TURN-03 | Phase 4 | Done |
+| TURN-04 | Phase 4 | Done |
+| TURN-05 | Phase 4 | Done |
 | TURN-06 | Phase 5 | Pending |
-| TEST-01 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
+| TEST-01 | Phase 4 | Done |
+| TEST-02 | Phase 4 | Done |
+| TEST-03 | Phase 4 | Done |
 
 **Coverage:**
 - v1.1 requirements: 9 total
