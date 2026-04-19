@@ -9,7 +9,7 @@ import type { Metadata } from "@/api/types";
 import { configuration } from "@/configuration";
 import type { Credentials } from '@/persistence';
 import { readSettings } from '@/persistence';
-import { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled } from '@/settings/sessionAgentToolsSettings';
+import { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled, findUnknownSessionAgentToolNames } from '@/settings/sessionAgentToolsSettings';
 import type { ExecutionRunServiceResult } from "@/session/services/executionRuns";
 
 export type HappyMcpExecutionRunService = Readonly<{
@@ -39,6 +39,24 @@ export async function startHappyServer(
     const settings = await readSettings();
     const toolsSettings = readSessionAgentToolsSettingsV1(settings);
     const isSessionAgentToolEnabled = buildIsSessionAgentToolEnabled(toolsSettings);
+
+    // Warn on unknown tool names at startup (VALID-01). Uses unfiltered catalog so that
+    // a tool disabled by the same config is not falsely reported as unknown.
+    const allKnownNames = listBuiltInHappierTools({ surface: 'session_agent' }).map((t) => t.name);
+    const unknownNames = findUnknownSessionAgentToolNames(toolsSettings, allKnownNames);
+    if (unknownNames.length > 0) {
+        logger.warn(
+            `[sessionAgentToolsSettings] Unknown tool names in sessionAgentToolsSettingsV1: ` +
+            `${JSON.stringify(unknownNames)} — these will be ignored. ` +
+            `Valid tool names: ${JSON.stringify(allKnownNames)}`,
+        );
+        // Silently log at debug level for processing-time traceability (TOOLS-02).
+        // This fires once at startup alongside the warn, covering the requirement that
+        // unknown names are handled at debug level so config files survive tool renames.
+        logger.debug(
+            `[sessionAgentToolsSettings] Ignoring unknown tool names at processing time: ${JSON.stringify(unknownNames)}`,
+        );
+    }
 
     // Snapshot filtered toolNames at startup — only enabled tools (D-06).
     const toolNamesSnapshot = listBuiltInHappierTools({ surface: 'session_agent' })
