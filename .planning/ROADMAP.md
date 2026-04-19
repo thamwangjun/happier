@@ -18,8 +18,8 @@
 
 ### v1.1 Distinguish Parent vs Subagent Turn Completion
 
-- [ ] **Phase 4: Restructure finalizeCurrentTurn()** — Split into unconditional bookkeeping (Phase A) and parent-only notification (Phase B); add isSubagent param; write tests first
-- [ ] **Phase 5: Wire Call Sites and Verify** — Pass correct isSubagent flag at each call site; confirm exactly one ready event fires per parent-completes-after-subagent sequence
+- [ ] **Phase 4: Restructure finalizeCurrentTurn()** — Split into `finalizeCurrentTurn()` (parent, Phase A + B) and `finalizeSubagentTurn()` (subagent, Phase A only); write tests first
+- [ ] **Phase 5: Verify End-to-End Behavior** — Confirm exactly one ready event fires per parent turn completion; no spurious ready events on subagent completion
 
 ## Phase Details
 
@@ -28,7 +28,7 @@
 **Depends on**: Nothing (first phase of v1.1)
 **Requirements**: TURN-01, TURN-02, TURN-03, TURN-05, TEST-01, TEST-02, TEST-03
 **Success Criteria** (what must be TRUE):
-  1. A caller can invoke `finalizeCurrentTurn({ isSubagent: true })` or `finalizeCurrentTurn({})` without type errors; existing call sites with no argument also compile without change
+  1. Two closures exist in `claudeRemoteAgentSdk.ts`: `finalizeCurrentTurn()` (parent path, `params?: { completionEvent?: string }`) and `finalizeSubagentTurn()` (subagent path, no params). The `task_notification` handler calls `finalizeSubagentTurn()`; result handlers call `finalizeCurrentTurn()`. All call sites compile without errors.
   2. After a subagent completion, `updateThinking(false)` runs, the transcript is flushed, and `activeTaskId` is cleared — verifiable by unit test checking Phase A executes on the subagent path
   3. After a subagent completion, `opts.onReady()` and `scheduleNextMessagePump()` do not execute — verifiable by unit test asserting the ready callback was never called
   4. `messageQueue.flush()` in the `onReady` lambda in `claudeRemoteLauncher.ts` still executes unconditionally — verifiable by inspection and by a test that confirms flush is called even when no ready event fires
@@ -39,14 +39,14 @@ Plans:
 - [x] 04-01-PLAN.md — Write three failing tests for the two-function split (TDD RED phase)
 - [x] 04-02-PLAN.md — Implement finalizeSubagentTurn(), add onSubagentFlush? to opts, wire launcher (GREEN phase)
 
-### Phase 5: Wire Call Sites and Verify
-**Goal**: Every call site of `finalizeCurrentTurn()` passes the correct `isSubagent` value, and the live session behavior produces exactly one ready event per parent turn completion
+### Phase 5: Verify End-to-End Behavior
+**Goal**: End-to-end verification that the two-function-split produces correct relay behavior: exactly one ready event per parent completion, no spurious ready events on subagent completion
 **Depends on**: Phase 4
-**Requirements**: TURN-04, TURN-06
+**Requirements**: TURN-06
 **Success Criteria** (what must be TRUE):
-  1. The `task_notification` handler passes `{ isSubagent: true }` and the `result` handler passes `{}` — verifiable by reading the three updated call sites in `claudeRemoteAgentSdk.ts`
+  1. The `task_notification` handler calls `finalizeSubagentTurn()` and does not call `finalizeCurrentTurn()` — verifiable by reading `claudeRemoteAgentSdk.ts` lines around the `task_notification` branch
   2. A test scenario of subagent completion followed by parent completion produces exactly one ready notification at the relay server — no duplicate ready events, no missing ready event
-  3. A test scenario of parent completion with no preceding subagent also produces exactly one ready notification — the refactor does not regress the baseline path
+  3. A test scenario of parent completion with no preceding subagent produces exactly one ready notification — the two-function split does not regress the baseline path (TURN-06 baseline case)
 **Plans**: TBD
 
 ## Progress
