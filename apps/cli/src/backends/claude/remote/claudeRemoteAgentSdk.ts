@@ -1194,11 +1194,8 @@ export async function claudeRemoteAgentSdk(opts: {
         const finalizeSubagentTurn = async () => {
             activeTaskId = null;
             updateThinking(false);
-            const interruptedReason = deferredInterruptedReason;
-            deferredInterruptedReason = null;
-            // Always use 'turn-end' for subagent flushes — subagent interrupts are not
-            // surfaced the same way as parent turn interrupts. Clear deferredInterruptedReason
-            // to prevent leaking its value into the subsequent parent turn.
+            // Always flush subagent turns as 'turn-end'; do NOT consume deferredInterruptedReason
+            // here — leave it for the parent finalizeCurrentTurn to handle.
             await flushStreamedTranscriptWriter('turn-end');
             logger.debug('[claudeRemoteAgentSdk] Subagent turn summary', {
                 ...turnDiagnostics,
