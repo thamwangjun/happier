@@ -33,7 +33,11 @@
   3. After a subagent completion, `opts.onReady()` and `scheduleNextMessagePump()` do not execute — verifiable by unit test asserting the ready callback was never called
   4. `messageQueue.flush()` in the `onReady` lambda in `claudeRemoteLauncher.ts` still executes unconditionally — verifiable by inspection and by a test that confirms flush is called even when no ready event fires
   5. All three new unit tests (subagent suppresses ready, parent after subagent fires exactly one ready, transcript flush runs on both paths) pass with no failures
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Write three failing tests for the two-function split (TDD RED phase)
+- [ ] 04-02-PLAN.md — Implement finalizeSubagentTurn(), add onSubagentFlush? to opts, wire launcher (GREEN phase)
 
 ### Phase 5: Wire Call Sites and Verify
 **Goal**: Every call site of `finalizeCurrentTurn()` passes the correct `isSubagent` value, and the live session behavior produces exactly one ready event per parent turn completion
