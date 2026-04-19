@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { request as httpRequest } from 'node:http';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -12,6 +14,8 @@ import { reloadConfiguration } from '@/configuration';
 import { registerExecutionRunHandlers } from '@/rpc/handlers/executionRuns';
 import { HAPPIER_MCP_ACTION_SPECS_RESOURCE_URI } from '@/mcp/resources/registerHappierMcpResources';
 import { startHappyServer, type HappyMcpSessionClient } from '@/mcp/startHappyServer';
+import { applyEnvValues, restoreEnvValues, snapshotEnvValues } from '@/testkit/env/envSnapshot';
+import { createTempDir, removeTempDir } from '@/testkit/fs/tempDir';
 
 const env = process.env;
 
@@ -637,5 +641,113 @@ describe('startHappyServer (MCP integration)', () => {
     } finally {
       server.stop();
     }
+  });
+
+  describe('sessionAgentToolsSettingsV1 filtering (TOOLS-01)', () => {
+    const envBackup = snapshotEnvValues(['HAPPIER_HOME_DIR', 'HAPPIER_SERVER_URL', 'HAPPIER_WEBAPP_URL']);
+    let homeDir: string | undefined;
+
+    beforeEach(async () => {
+      homeDir = await createTempDir('happier-mcp-filter-integration-');
+      applyEnvValues({
+        HAPPIER_HOME_DIR: homeDir,
+        HAPPIER_SERVER_URL: 'https://api.example.test',
+        HAPPIER_WEBAPP_URL: 'https://app.example.test',
+      });
+      reloadConfiguration();
+    });
+
+    afterEach(async () => {
+      restoreEnvValues(envBackup);
+      reloadConfiguration();
+      if (homeDir) await removeTempDir(homeDir);
+    });
+
+    it('hides a tool disabled via sessionAgentToolsSettingsV1 from listTools response', async () => {
+      const settings = {
+        schemaVersion: 6,
+        onboardingCompleted: false,
+        sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
+      };
+      await writeFile(
+        join(homeDir!, 'settings.json'),
+        JSON.stringify(settings),
+        { mode: 0o600 },
+      );
+
+      const fakeClient: HappyMcpSessionClient = {
+        sessionId: 'sess_filter_disabled_1',
+        rpcHandlerManager: { invokeLocal: vi.fn(async () => ({})) } as any,
+        sendClaudeSessionMessage: () => {},
+        updateMetadata: () => {},
+      };
+
+      const server = await startHappyServer(fakeClient);
+      let client: Client | null = null;
+      try {
+        client = new Client({ name: 'mcp-test-filter-disabled', version: '1.0.0' }, { capabilities: {} });
+        await client.connect(new StreamableHTTPClientTransport(new URL(server.url)));
+
+        const tools = await client.listTools();
+        const names = new Set((tools.tools ?? []).map((t: any) => String(t.name)));
+        expect(names.has('change_title')).toBe(false);
+        expect(names.size).toBeGreaterThan(0); // other tools are still present
+      } finally {
+        await (client as any)?.close?.();
+        server.stop();
+      }
+    });
+
+    it('returns startHappyServer toolNames without the disabled tool (D-06)', async () => {
+      const settings = {
+        schemaVersion: 6,
+        onboardingCompleted: false,
+        sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
+      };
+      await writeFile(
+        join(homeDir!, 'settings.json'),
+        JSON.stringify(settings),
+        { mode: 0o600 },
+      );
+
+      const fakeClient: HappyMcpSessionClient = {
+        sessionId: 'sess_filter_snapshot_1',
+        rpcHandlerManager: { invokeLocal: vi.fn(async () => ({})) } as any,
+        sendClaudeSessionMessage: () => {},
+        updateMetadata: () => {},
+      };
+
+      const server = await startHappyServer(fakeClient);
+      try {
+        expect(server.toolNames).not.toContain('change_title');
+        expect(server.toolNames.length).toBeGreaterThan(0);
+      } finally {
+        server.stop();
+      }
+    });
+
+    it('enables all tools when no settings file exists (STARTUP-02)', async () => {
+      // homeDir exists (created by beforeEach) but no settings.json is written
+      const fakeClient: HappyMcpSessionClient = {
+        sessionId: 'sess_filter_absent_1',
+        rpcHandlerManager: { invokeLocal: vi.fn(async () => ({})) } as any,
+        sendClaudeSessionMessage: () => {},
+        updateMetadata: () => {},
+      };
+
+      const server = await startHappyServer(fakeClient);
+      let client: Client | null = null;
+      try {
+        client = new Client({ name: 'mcp-test-filter-absent', version: '1.0.0' }, { capabilities: {} });
+        await client.connect(new StreamableHTTPClientTransport(new URL(server.url)));
+
+        const tools = await client.listTools();
+        const names = new Set((tools.tools ?? []).map((t: any) => String(t.name)));
+        expect(names.has('change_title')).toBe(true);
+      } finally {
+        await (client as any)?.close?.();
+        server.stop();
+      }
+    });
   });
 });
