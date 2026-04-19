@@ -42,7 +42,7 @@ import { tryReadTextFileTail } from '@/agent/runtime/readTextFileTail';
 import { readClaudeSessionJsonlMessages } from './utils/readClaudeSessionJsonlMessages';
 import { normalizeClaudeToolUseNamesInRawJsonLines } from './utils/normalizeClaudeToolUseNames';
 import { CHANGE_TITLE_INSTRUCTION } from '@/agent/runtime/changeTitleInstruction';
-import { CHANGE_TITLE_TOOL_NAME_ALIASES } from '@happier-dev/protocol/tools/v2';
+import { CHANGE_TITLE_TOOL_NAME_ALIASES, isGenericSubAgentToolName } from '@happier-dev/protocol/tools/v2';
 import type { AccountSettings } from '@happier-dev/protocol';
 import { buildTurnChangeSetDiffInput } from '@/agent/tools/diff/buildTurnChangeSetDiffInput';
 import { ClaudeTurnChangeTracker } from './utils/ClaudeTurnChangeTracker';
@@ -1078,7 +1078,6 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                 // Flush any remaining messages in the queue
                 logger.debug('[remote]: flushing message queue');
                 await messageQueue.flush();
-                messageQueue.destroy();
                 logger.debug('[remote]: message queue flushed');
 
                 // Reset abort controller and future
@@ -1118,6 +1117,9 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
 
         messageBuffer.clear();
 
+        // Destroy the message queue to clear any remaining timers
+        messageQueue.destroy();
+
         // Resolve abort future
         if (abortFuture) { // Just in case of error
             abortFuture.resolve(undefined);
@@ -1126,4 +1128,3 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
 
     return exitReason || 'exit';
 }
-import { isGenericSubAgentToolName } from '@happier-dev/protocol/tools/v2';
