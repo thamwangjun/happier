@@ -111,11 +111,11 @@ export interface Settings {
    */
   memory?: unknown
   /**
-   * Per-tool MCP enable/disable configuration (CLI-local; schema-validated).
-   * Parsed/normalized by `settings/mcpToolsSettings.ts`.
-   * Stored as raw JSON — always access via `readMcpToolsSettingsV1(settings)`.
+   * Per-tool session-agent enable/disable configuration (CLI-local; schema-validated).
+   * Parsed/normalized by `settings/sessionAgentToolsSettings.ts`.
+   * Stored as raw JSON — always access via `readSessionAgentToolsSettingsV1(settings)`.
    */
-  mcpToolsSettingsV1?: unknown;
+  sessionAgentToolsSettingsV1?: unknown;
 }
 
 const defaultSettings: Settings = {
