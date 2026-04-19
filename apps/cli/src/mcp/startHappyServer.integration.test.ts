@@ -726,6 +726,42 @@ describe('startHappyServer (MCP integration)', () => {
       }
     });
 
+    it('enables all tools and does not crash when sessionAgentToolsSettingsV1 is corrupt (STARTUP-03)', async () => {
+      const settings = {
+        schemaVersion: 6,
+        onboardingCompleted: false,
+        sessionAgentToolsSettingsV1: 'bad_string',
+      };
+      await writeFile(
+        join(homeDir!, 'settings.json'),
+        JSON.stringify(settings),
+        { mode: 0o600 },
+      );
+
+      const fakeClient: HappyMcpSessionClient = {
+        sessionId: 'sess_filter_corrupt_1',
+        rpcHandlerManager: { invokeLocal: vi.fn(async () => ({})) } as any,
+        sendClaudeSessionMessage: () => {},
+        updateMetadata: () => {},
+      };
+
+      const server = await startHappyServer(fakeClient);
+      let client: Client | null = null;
+      try {
+        client = new Client({ name: 'mcp-test-filter-corrupt', version: '1.0.0' }, { capabilities: {} });
+        await client.connect(new StreamableHTTPClientTransport(new URL(server.url)));
+
+        const tools = await client.listTools();
+        const names = new Set((tools.tools ?? []).map((t: any) => String(t.name)));
+        // Corrupt settings fall back to defaults — all tools enabled
+        expect(names.has('change_title')).toBe(true);
+        expect(names.size).toBeGreaterThan(0);
+      } finally {
+        await (client as any)?.close?.();
+        server.stop();
+      }
+    });
+
     it('enables all tools when no settings file exists (STARTUP-02)', async () => {
       // homeDir exists (created by beforeEach) but no settings.json is written
       const fakeClient: HappyMcpSessionClient = {
