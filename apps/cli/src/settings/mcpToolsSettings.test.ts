@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyEnvValues, restoreEnvValues, snapshotEnvValues } from '@/testkit/env/envSnapshot';
 import { createTempDir, removeTempDir } from '@/testkit/fs/tempDir';
 
+vi.mock('@/ui/logger', () => ({
+    logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
 describe('mcpToolsSettings', () => {
     const envBackup = snapshotEnvValues(['HAPPIER_HOME_DIR', 'HAPPIER_SERVER_URL', 'HAPPIER_WEBAPP_URL']);
     let homeDir: string | undefined;
@@ -63,24 +67,24 @@ describe('mcpToolsSettings', () => {
     });
 
     it('returns default and emits logger.warn when v is not 1', async () => {
-        const loggerModule = await import('@/ui/logger');
-        const warnSpy = vi.spyOn(loggerModule.logger, 'warn').mockImplementation(() => {});
+        const { logger } = await import('@/ui/logger');
+        const warnSpy = vi.mocked(logger.warn);
+        warnSpy.mockClear();
         const { readMcpToolsSettingsV1, DEFAULT_MCP_TOOLS_SETTINGS } = await import('./mcpToolsSettings');
         const result = readMcpToolsSettingsV1({ mcpToolsSettingsV1: { v: 2 } } as any);
         expect(result).toEqual(DEFAULT_MCP_TOOLS_SETTINGS);
         expect(warnSpy).toHaveBeenCalledOnce();
         expect(warnSpy.mock.calls[0]?.[0]).toMatch(/mcpToolsSettings/);
-        warnSpy.mockRestore();
     });
 
     it('returns default and emits logger.warn when tools is not a record', async () => {
-        const loggerModule = await import('@/ui/logger');
-        const warnSpy = vi.spyOn(loggerModule.logger, 'warn').mockImplementation(() => {});
+        const { logger } = await import('@/ui/logger');
+        const warnSpy = vi.mocked(logger.warn);
+        warnSpy.mockClear();
         const { readMcpToolsSettingsV1, DEFAULT_MCP_TOOLS_SETTINGS } = await import('./mcpToolsSettings');
         const result = readMcpToolsSettingsV1({ mcpToolsSettingsV1: { v: 1, tools: 'bad' } } as any);
         expect(result).toEqual(DEFAULT_MCP_TOOLS_SETTINGS);
         expect(warnSpy).toHaveBeenCalledOnce();
-        warnSpy.mockRestore();
     });
 
     it('absent tool name in tools map is undefined — opt-out model (SCHEMA-02)', async () => {
@@ -93,11 +97,11 @@ describe('mcpToolsSettings', () => {
     });
 
     it('does not emit logger.warn when mcpToolsSettingsV1 is absent', async () => {
-        const loggerModule = await import('@/ui/logger');
-        const warnSpy = vi.spyOn(loggerModule.logger, 'warn').mockImplementation(() => {});
+        const { logger } = await import('@/ui/logger');
+        const warnSpy = vi.mocked(logger.warn);
+        warnSpy.mockClear();
         const { readMcpToolsSettingsV1 } = await import('./mcpToolsSettings');
         readMcpToolsSettingsV1({} as any);
         expect(warnSpy).not.toHaveBeenCalled();
-        warnSpy.mockRestore();
     });
 });
