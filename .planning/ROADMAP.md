@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The schema rejects a blob that fails validation and returns a typed null/fallback rather than throwing
 
 Plans:
-- [ ] 01-01-PLAN.md — Define McpToolsSettingsV1Schema, reader function, and extend Settings interface
+- [x] 01-01-PLAN.md — Define McpToolsSettingsV1Schema, reader function, and extend Settings interface
 
 ### Phase 2: Startup Wiring & Tool Filtering
 **Goal**: MCP server startup reads the config once and only registers tools the developer has left enabled
