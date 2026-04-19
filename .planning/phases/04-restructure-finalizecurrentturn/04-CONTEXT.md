@@ -1,46 +1,50 @@
 # Phase 4: Restructure finalizeCurrentTurn() - Context
 
 **Gathered:** 2026-04-19
+**Revised:** 2026-04-19 (anti-pattern review)
 **Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Split `finalizeCurrentTurn()` in `claudeRemoteAgentSdk.ts` into unconditional bookkeeping (Phase A) and parent-only turn-ready notification (Phase B). Add `isSubagent?: boolean` to the params bag. Write 3 tests (TEST-01, TEST-02, TEST-03) in a new test file. Wire `onSubagentFlush` in `claudeRemoteLauncher.ts` so `messageQueue.flush()` still runs on subagent completion. Scope: `claudeRemoteAgentSdk.ts`, `claudeRemoteLauncher.ts`, new test file.
+Replace `finalizeCurrentTurn()` with two focused functions in `claudeRemoteAgentSdk.ts`: `finalizeCurrentTurn()` for parent completion (bookkeeping + notification) and `finalizeSubagentTurn()` for subagent completion (bookkeeping + flush only). Add `onSubagentFlush?: () => Promise<void>` to the opts object. Write 3 tests (TEST-01, TEST-02, TEST-03) in a new test file. Wire `onSubagentFlush` in `claudeRemoteLauncher.ts`. Scope: `claudeRemoteAgentSdk.ts`, `claudeRemoteLauncher.ts`, new test file.
 
 </domain>
 
 <decisions>
 ## Implementation Decisions
 
-### isSubagent parameter
-- **D-01:** Add `isSubagent?: boolean` to the existing params bag (`params?: { completionEvent?: string; isSubagent?: boolean }`). Backward-compatible — existing call sites with no arg still compile.
+### Two functions replacing finalizeCurrentTurn() (anti-pattern: Flag Argument)
+- **D-01:** Replace the single `finalizeCurrentTurn(params?)` with two named functions:
+  - `finalizeCurrentTurn()` — parent path only. Runs all bookkeeping + turn-ready notification. No params needed.
+  - `finalizeSubagentTurn()` — subagent path only. Runs bookkeeping + flush, no ready notification. No params needed.
+- **D-02:** `task_notification` handler calls `finalizeSubagentTurn()`; `result` and compact handlers call `finalizeCurrentTurn()`. Call sites are unambiguous — no flag to interpret.
+- **D-03:** Rationale: eliminates the Flag Argument anti-pattern. Matches the Codex `finalizeSyntheticSubagentThread` pattern already in the codebase.
 
-### Guard (didFinalizeTurn) on subagent path
-- **D-02:** Change the early-return guard to `if (!isSubagent && didFinalizeTurn) return`. Subagent calls skip the guard — Phase A always runs when `isSubagent=true`. The upstream `task_id === activeTaskId` check already prevents spurious duplicate `task_notification` messages.
-- **D-03:** `didFinalizeTurn = true` and `awaitingNextTurnStart = true` remain inside the `!isSubagent` gate (Phase B only). Moving them before the gate silently drops the parent's `onReady()` — confirmed by prior research.
+### finalizeCurrentTurn() — parent path
+- **D-04:** Contains all existing logic unchanged: `didFinalizeTurn` guard, `didFinalizeTurn = true`, `awaitingNextTurnStart = true`, `activeTaskId = null`, `updateThinking(false)`, transcript flush, diagnostics log + reset, `opts.onCompletionEvent?.(...)`, `await opts.onReady()`, `scheduleNextMessagePump()`.
+- **D-05:** `completionEvent` parameter stays on `finalizeCurrentTurn({ completionEvent? })` — only parent/compact paths ever pass it.
 
-### Phase A (unconditional bookkeeping)
-- **D-04:** `activeTaskId = null`, `updateThinking(false)`, consume and clear `deferredInterruptedReason`, `flushStreamedTranscriptWriter(...)`, `logger.debug(...)`, `resetTurnDiagnostics()` — all run for both parent and subagent completions.
+### finalizeSubagentTurn() — subagent path
+- **D-06:** Runs bookkeeping only: `activeTaskId = null`, `updateThinking(false)`, consume and clear `deferredInterruptedReason`, `flushStreamedTranscriptWriter('turn-end')`, `logger.debug(...)`, `resetTurnDiagnostics()`. Then calls `await opts.onSubagentFlush?.()`.
+- **D-07:** No `didFinalizeTurn` guard — subagent turns are independent of the parent turn state. The upstream `task_id === activeTaskId` check is the only deduplication needed.
+- **D-08:** `deferredInterruptedReason` and `resetTurnDiagnostics()` both run unconditionally in `finalizeSubagentTurn()` — subagent turns are still turns and their per-turn state should be cleared.
 
-### Phase B (parent-only notification)
-- **D-05:** `didFinalizeTurn = true`, `awaitingNextTurnStart = true`, `opts.onCompletionEvent?.(params.completionEvent)`, `await opts.onReady()`, `scheduleNextMessagePump()` — all run only when `!isSubagent`. `completionEvent` moves to Phase B (semantic: it's a notification, only ever passed on parent/compact paths anyway).
-
-### opts.onSubagentFlush callback
-- **D-06:** Add `onSubagentFlush?: () => Promise<void>` to the opts/params object passed into `claudeRemoteAgentSdk`. When `isSubagent=true`, call `await opts.onSubagentFlush?.()` at the end of Phase A (instead of `opts.onReady()`).
-- **D-07:** `onSubagentFlush` is called every time `finalizeCurrentTurn` runs with `isSubagent=true` — no additional guard. The upstream deduplication is sufficient.
+### opts.onSubagentFlush callback (anti-pattern: Interface Bloat — accepted trade-off)
+- **D-09:** Add `onSubagentFlush?: () => Promise<void>` to the opts object. Called by `finalizeSubagentTurn()` to flush the message queue without triggering `readyHandler()`. Optional — existing call sites compile without it.
+- **D-10:** `onSubagentFlush` called every time `finalizeSubagentTurn()` runs — no additional guard.
+- **D-11:** Noted trade-off: adds one property to the opts object (interface bloat concern). Accepted because two-function split (D-01) already resolves the flag argument and SRP concerns; a single optional property is manageable.
 
 ### claudeRemoteLauncher.ts
-- **D-08:** Wire `onSubagentFlush` in the live launcher (not just test harness). Implementation: `onSubagentFlush: async () => { await messageQueue.flush(); }`. The existing `onReady` lambda is unchanged: `async () => { await messageQueue.flush(); readyHandler(); }`.
-- **D-09:** Update any test harness that builds an opts object for `claudeRemoteAgentSdk` to include `onSubagentFlush` (prevents type errors). Specifically `claudeRemoteLauncher.readyPushPolicy.test.ts` and any other launcher tests.
+- **D-12:** Wire `onSubagentFlush` in the live launcher: `onSubagentFlush: async () => { await messageQueue.flush(); }`. The existing `onReady` lambda is unchanged.
+- **D-13:** Update test harnesses (e.g. `claudeRemoteLauncher.readyPushPolicy.test.ts`) to add `onSubagentFlush` stub — prevents type errors after opts interface change.
 
 ### Test file
-- **D-10:** New file: `apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.subagentTurnCompletion.test.ts`. Contains TEST-01, TEST-02, TEST-03. Do not add to `optionsAndHooks.test.ts` (already 1600+ lines).
-- **D-11:** TDD order: write failing tests first, then implement the production change.
+- **D-14:** New file: `apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.subagentTurnCompletion.test.ts`. Contains TEST-01, TEST-02, TEST-03.
+- **D-15:** TDD order: write failing tests first, then implement.
 
 ### Claude's Discretion
-- Whether to use `params?.isSubagent ?? false` or `!!params?.isSubagent` for the boolean coercion — either is fine.
-- Internal naming of the local variable (e.g. `const isSubagent = params?.isSubagent ?? false`).
+- Whether to extract shared bookkeeping into a private helper called by both functions — not required; Phase A code is short enough to inline in each.
 
 </decisions>
 
@@ -88,15 +92,15 @@ Split `finalizeCurrentTurn()` in `claudeRemoteAgentSdk.ts` into unconditional bo
 <specifics>
 ## Specific Ideas
 
-- The two-phase naming ("Phase A" / "Phase B") from REQUIREMENTS.md maps directly to code comments: comment `// Phase A: unconditional bookkeeping` and `// Phase B: parent-only notification` as structural markers inside `finalizeCurrentTurn`.
-- No new class or module needed — all changes are within existing closures.
+- Two functions mirror the Codex pattern: `finalizeSyntheticSubagentThread` in `apps/cli/src/backends/codex/appServer/runtime.ts` is the reference.
+- No new class or module needed — both functions are closures inside `claudeRemoteAgentSdk`, sharing the same local state vars.
 
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-- Dedicated `finalizeSyntheticSubagentThread` function (Codex-style) if agent-teams becomes a primary code path — deferred to future milestone per PROJECT.md.
+- Extract shared bookkeeping into a private helper (e.g. `runTurnBookkeeping()`) to eliminate any duplication between `finalizeCurrentTurn` and `finalizeSubagentTurn` — deferred; Phase A code is short enough to inline for now.
 - Gate `resetTurnDiagnostics()` behind `!isSubagent` for full-turn diagnostics — flagged in Future Requirements, not in scope for Phase 4.
 
 </deferred>
