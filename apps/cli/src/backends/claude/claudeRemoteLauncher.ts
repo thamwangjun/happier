@@ -993,6 +993,9 @@ export async function claudeRemoteLauncher(session: Session): Promise<'switch' |
                         await messageQueue.flush();
                         readyHandler();
                     },
+                    onSubagentFlush: async () => {
+                        await messageQueue.flush();
+                    },
                     signal: abortController.signal,
                 });
                 
