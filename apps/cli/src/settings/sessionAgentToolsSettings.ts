@@ -59,3 +59,21 @@ export function buildIsSessionAgentToolEnabled(
 ): (toolName: string) => boolean {
     return (toolName: string) => settings.tools[toolName]?.enabled !== false;
 }
+
+/**
+ * Returns the subset of tool names present in settings.tools that are not in knownNames.
+ *
+ * Used by the caller (startHappyServer.ts) to emit a startup warn when the developer's config
+ * references tool names that do not exist in the session_agent catalog.
+ * Never throws. Returns [] when settings.tools is empty or all names are recognized.
+ *
+ * Satisfies TOOLS-02 (silent at processing time — this function returns names, caller decides IO)
+ * and VALID-01 (caller emits logger.warn when result is non-empty).
+ */
+export function findUnknownSessionAgentToolNames(
+    settings: SessionAgentToolsSettingsV1,
+    knownNames: string[],
+): string[] {
+    const knownSet = new Set(knownNames);
+    return Object.keys(settings.tools).filter((name) => !knownSet.has(name));
+}

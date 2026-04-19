@@ -133,4 +133,27 @@ describe('sessionAgentToolsSettings', () => {
             expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(false);
         });
     });
+
+    describe('findUnknownSessionAgentToolNames', () => {
+        it('returns empty array when all configured names are known', async () => {
+            const { findUnknownSessionAgentToolNames } = await import('./sessionAgentToolsSettings');
+            const settings = { v: 1 as const, tools: { change_title: { enabled: false } } };
+            expect(findUnknownSessionAgentToolNames(settings, ['change_title', 'memory_search'])).toEqual([]);
+        });
+
+        it('returns unknown names when configured names are not in the known list', async () => {
+            const { findUnknownSessionAgentToolNames } = await import('./sessionAgentToolsSettings');
+            const settings = { v: 1 as const, tools: { 'change-title': { enabled: false }, typo_tool: { enabled: true } } };
+            const result = findUnknownSessionAgentToolNames(settings, ['change_title', 'memory_search']);
+            expect(result).toContain('change-title');
+            expect(result).toContain('typo_tool');
+            expect(result).toHaveLength(2);
+        });
+
+        it('returns empty array when settings.tools is empty (DEFAULT_SESSION_AGENT_TOOLS_SETTINGS)', async () => {
+            const { findUnknownSessionAgentToolNames, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } =
+                await import('./sessionAgentToolsSettings');
+            expect(findUnknownSessionAgentToolNames(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS, ['change_title'])).toEqual([]);
+        });
+    });
 });
