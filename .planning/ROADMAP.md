@@ -36,8 +36,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Write three failing tests for the two-function split (TDD RED phase)
-- [ ] 04-02-PLAN.md — Implement finalizeSubagentTurn(), add onSubagentFlush? to opts, wire launcher (GREEN phase)
+- [x] 04-01-PLAN.md — Write three failing tests for the two-function split (TDD RED phase)
+- [x] 04-02-PLAN.md — Implement finalizeSubagentTurn(), add onSubagentFlush? to opts, wire launcher (GREEN phase)
 
 ### Phase 5: Wire Call Sites and Verify
 **Goal**: Every call site of `finalizeCurrentTurn()` passes the correct `isSubagent` value, and the live session behavior produces exactly one ready event per parent turn completion
