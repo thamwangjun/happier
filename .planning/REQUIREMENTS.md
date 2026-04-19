@@ -41,16 +41,16 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TURN-01 | — | Pending |
-| TURN-02 | — | Pending |
-| TURN-03 | — | Pending |
-| TURN-04 | — | Pending |
-| TURN-05 | — | Pending |
-| TURN-06 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
+| TURN-01 | Phase 4 | Pending |
+| TURN-02 | Phase 4 | Pending |
+| TURN-03 | Phase 4 | Pending |
+| TURN-04 | Phase 5 | Pending |
+| TURN-05 | Phase 4 | Pending |
+| TURN-06 | Phase 5 | Pending |
+| TEST-01 | Phase 4 | Pending |
+| TEST-02 | Phase 4 | Pending |
+| TEST-03 | Phase 4 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 9 total
-- Mapped to phases: 0 (roadmapper pending)
+- Mapped to phases: 9/9 (100%)
