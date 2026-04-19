@@ -103,6 +103,7 @@ startHappyServer()
     |
     |-- if (unknownNames.length > 0)
     |       +-- logger.warn(aggregated message)        [NEW CALL SITE]
+    |       +-- logger.debug(processing-time note)    [NEW CALL SITE — TOOLS-02]
     |
     |-- toolNamesSnapshot = listBuiltInHappierTools(...)
     |       .filter(isSessionAgentToolEnabled).map(t => t.name)  [already exists]
@@ -121,7 +122,7 @@ apps/cli/src/settings/
     sessionAgentToolsSettings.test.ts  ← add unit tests for new function
 
 apps/cli/src/mcp/
-└── startHappyServer.ts            ← add call site + logger.warn
+└── startHappyServer.ts            ← add call site + logger.warn + logger.debug
     startHappyServer.integration.test.ts  ← add integration tests for warn behavior
 ```
 
@@ -153,6 +154,9 @@ if (unknownNames.length > 0) {
         `[sessionAgentToolsSettings] Unknown tool names in sessionAgentToolsSettingsV1: ` +
         `${JSON.stringify(unknownNames)} — these will be ignored. ` +
         `Valid tool names: ${JSON.stringify(allKnownNames)}`,
+    );
+    logger.debug(
+        `[sessionAgentToolsSettings] Ignoring unknown tool names at processing time: ${JSON.stringify(unknownNames)}`,
     );
 }
 ```
@@ -214,7 +218,7 @@ logger.warn(`[sessionAgentToolsSettings] sessionAgentToolsSettingsV1 failed sche
 
 **Root cause:** TOOLS-02 is about per-tool-invocation silently ignoring unknown names (not an aggregated check). The natural site is where the filtering predicate is applied — `buildIsSessionAgentToolEnabled` already handles this silently (returns `true` for names not in config); no additional debug is strictly needed at that layer.
 
-**Prevention:** If TOOLS-02 debug is implemented in this phase, place it at the call site in `startHappyServer.ts` (or note it as deferred per D-01).
+**Prevention:** Place the TOOLS-02 debug call at the call site in `startHappyServer.ts` inside the same `if (unknownNames.length > 0)` guard as the warn — co-located, single location, guarded against noise on clean configs.
 
 ### Pitfall 4: Test uses logger.warn spy without vi.mock setup
 
@@ -380,17 +384,19 @@ The only security-adjacent concern is log content: the warn message includes too
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **TOOLS-02 debug log: same plan or follow-up?**
    - What we know: D-01 explicitly defers TOOLS-02 to a follow-up if the planner judges it out of scope for a single plan.
    - What is unclear: Whether the planner includes it in the same plan (small addition) or defers it.
    - Recommendation: Include it. The implementation is trivial — a single `logger.debug` in `startHappyServer.ts` (or inside `buildIsSessionAgentToolEnabled`'s returned closure) — and it closes TOOLS-02 completely in the same plan.
+   - **RESOLVED:** Included in the same plan (03-01). A `logger.debug` call is placed inside the `if (unknownNames.length > 0)` guard in `startHappyServer.ts`, co-located with the `logger.warn`. TOOLS-02 is covered in the requirements frontmatter of 03-01-PLAN.md.
 
 2. **Integration test warn assertion strategy: spy vs log-file read**
    - What we know: The integration test file does not mock `logger`. The unit test file does mock `logger`.
    - What is unclear: Whether the planner puts the VALID-01 integration assertion in a new integration test case (using a spy) or relies solely on unit tests for warn content.
    - Recommendation: Assert warn behavior in unit tests (spy, clean), assert no-crash behavior in integration tests (listTools call succeeds despite bad config name). This matches the existing pattern in the Phase 2 integration test suite.
+   - **RESOLVED:** Warn content (spy) is asserted in unit tests only. The integration test asserts no-crash + `listTools` functional behavior. This is the approach in 03-01-PLAN.md Task 2.
 
 ---
 
