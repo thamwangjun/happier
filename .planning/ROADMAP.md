@@ -58,7 +58,7 @@ Plans:
   3. Unknown tool names do not prevent startup or alter the behavior of correctly-named entries
 
 Plans:
-- [ ] 03-01-PLAN.md — Add findUnknownSessionAgentToolNames, wire logger.warn call site in startHappyServer, add unit and integration tests
+- [x] 03-01-PLAN.md — Add findUnknownSessionAgentToolNames, wire logger.warn call site in startHappyServer, add unit and integration tests
 
 ## Progress
 
