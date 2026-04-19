@@ -116,7 +116,20 @@ A developer can start an AI coding session on their machine and seamlessly conti
 
 ### Active
 
-*(Planning next milestone)*
+**v1.1 — Distinguish Parent vs Subagent Turn Completion (Claude backend)**
+- [ ] Add `isSubagent: boolean` parameter to `finalizeCurrentTurn()` in `claudeRemoteAgentSdk.ts`
+- [ ] Gate `opts.onReady()` behind `if (!isSubagent)` — suppress ready notification on subagent completion
+- [ ] Wire `finalizeCurrentTurn(false)` on `SDKResultMessage` (parent) path, `finalizeCurrentTurn(true)` on `task_notification` (subagent) path
+- [ ] Trace `onReady` → `readyHandler` call graph in `claudeRemoteLauncher.ts` to confirm no session-loop side effects
+
+## Current Milestone: v1.1 Distinguish Parent vs Subagent Turn Completion
+
+**Goal:** Stop the Claude backend from firing the `ready` notification on subagent turn completion — only the parent agent turn completion should trigger it.
+
+**Target features:**
+- Parameterize `finalizeCurrentTurn()` with `isSubagent` flag
+- Gate `opts.onReady()` on parent-only path
+- Verify no session-loop regressions
 
 ### Recently Validated
 
