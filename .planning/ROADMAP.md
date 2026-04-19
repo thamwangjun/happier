@@ -35,12 +35,17 @@ Plans:
 **Goal**: MCP server startup reads the config once and only registers tools the developer has left enabled
 **Depends on**: Phase 1
 **Requirements**: STARTUP-01, STARTUP-02, STARTUP-03, TOOLS-01
-**Plans**: TBD
+**Plans**: 3 plans
 **Success Criteria** (what must be TRUE):
   1. After editing `settings.json` to disable a tool, restarting the daemon causes that tool to disappear from the MCP tool list (verified via any MCP client or inspector)
-  2. A developer with no `settings.json` (or no `mcpToolsSettingsV1` key) sees all tools available — no behavior change from pre-feature state
-  3. A developer with a corrupt or schema-invalid `mcpToolsSettingsV1` value sees all tools available and finds a warning in the daemon log; the daemon does not crash
+  2. A developer with no `settings.json` (or no `sessionAgentToolsSettingsV1` key) sees all tools available — no behavior change from pre-feature state
+  3. A developer with a corrupt or schema-invalid `sessionAgentToolsSettingsV1` value sees all tools available and finds a warning in the daemon log; the daemon does not crash
   4. Tool visibility is determined once at startup, not re-evaluated per MCP request
+
+Plans:
+- [ ] 02-01-PLAN.md — Rename sweep: mcpToolsSettingsV1 → sessionAgentToolsSettingsV1 across all Phase 1 artifacts; add buildIsSessionAgentToolEnabled predicate builder
+- [ ] 02-02-PLAN.md — Predicate threading: startHappyServer reads settings once, createHappierMcpServer extends opts, registerHappierMcpBuiltInTools applies filter; unit tests
+- [ ] 02-03-PLAN.md — Integration test coverage: end-to-end TOOLS-01 and STARTUP-02 verification via real MCP server + listTools
 
 ### Phase 3: Validation Feedback
 **Goal**: The startup log tells developers which tool names in their config are unrecognized, preventing silent misconfiguration
@@ -60,5 +65,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Schema & Reader | 0/1 | Not started | - |
-| 2. Startup Wiring & Tool Filtering | 0/TBD | Not started | - |
+| 2. Startup Wiring & Tool Filtering | 0/3 | Not started | - |
 | 3. Validation Feedback | 0/TBD | Not started | - |
