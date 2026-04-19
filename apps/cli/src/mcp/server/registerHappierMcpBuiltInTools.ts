@@ -14,9 +14,12 @@ export function registerHappierMcpBuiltInTools(
         surface: BuiltInHappierToolsSurface;
         deps: DispatchDeps;
         resolveSessionId?: (toolArgs: unknown) => string;
+        isSessionAgentToolEnabled?: (toolName: string) => boolean;
     }>,
 ): Readonly<{ toolNames: string[] }> {
-  const enabledTools = listBuiltInHappierTools({ surface: params.surface });
+    const allTools = listBuiltInHappierTools({ surface: params.surface });
+    const predicate = params.isSessionAgentToolEnabled ?? (() => true);
+    const enabledTools = allTools.filter((tool) => predicate(tool.name));
 
     for (const tool of enabledTools) {
         server.registerTool(
