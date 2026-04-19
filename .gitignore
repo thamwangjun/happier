@@ -97,6 +97,10 @@ _.env.pipeline.production.local
 # Local node version file (keep local)
 .nvmrc
 
+# mise
+mise.toml
+.mise.toml
+
 # Local package-manager/runtime artifacts
 /package-lock.json
 /eas.json
