@@ -102,6 +102,11 @@ export async function claudeRemoteAgentSdk(opts: {
     // Dynamic parameters
     nextMessage: () => Promise<{ message: string; mode: EnhancedMode } | null>;
     onReady: () => void | Promise<void>;
+    /**
+     * Called by finalizeSubagentTurn() to flush message queue without triggering readyHandler.
+     * Optional — existing call sites compile without it.
+     */
+    onSubagentFlush?: () => Promise<void>;
     isAborted: (toolCallId: string) => boolean;
 
     // Callbacks
@@ -662,12 +667,18 @@ export async function claudeRemoteAgentSdk(opts: {
 
     const streamedTranscriptWriter = opts.streamedTranscriptWriter ?? null;
     let cleanupBufferedAssistantMessages: ((incoming: unknown) => void) | null = null;
+    // Set to true when a clean turn-end flush has occurred (via finalizeCurrentTurn or
+    // finalizeSubagentTurn). Used to suppress the safety-net 'runner-finalize' flush in
+    // the finally block so that transcript consumers see each turn flushed exactly once.
+    let didFlushTranscriptCleanly = false;
 
 	    const flushStreamedTranscriptWriter = async (
 	        reason: 'tool-call-boundary' | 'turn-end' | 'abort',
 	        interruptedReason?: string,
 	    ) => {
 	        if (!streamedTranscriptWriter) return;
+        if (reason === 'abort' && interruptedReason === 'runner-finalize' && didFlushTranscriptCleanly) return;
+        if (reason === 'turn-end') didFlushTranscriptCleanly = true;
         try {
             await streamedTranscriptWriter.flushAll({
                 reason,
@@ -1180,6 +1191,23 @@ export async function claudeRemoteAgentSdk(opts: {
             scheduleNextMessagePump();
         };
 
+        const finalizeSubagentTurn = async () => {
+            activeTaskId = null;
+            updateThinking(false);
+            const interruptedReason = deferredInterruptedReason;
+            deferredInterruptedReason = null;
+            // Always use 'turn-end' for subagent flushes — subagent interrupts are not
+            // surfaced the same way as parent turn interrupts. Clear deferredInterruptedReason
+            // to prevent leaking its value into the subsequent parent turn.
+            await flushStreamedTranscriptWriter('turn-end');
+            logger.debug('[claudeRemoteAgentSdk] Subagent turn summary', {
+                ...turnDiagnostics,
+                didPublishAssistantTextThisTurn,
+            });
+            resetTurnDiagnostics();
+            await opts.onSubagentFlush?.();
+        };
+
         // Fire-and-forget capability publication.
         // This must not block the main streaming loop.
         const onCapabilities = opts.onCapabilities;
@@ -1533,7 +1561,7 @@ export async function claudeRemoteAgentSdk(opts: {
                             activeTaskId = null;
                         }
                         if (status === 'stopped' || status === 'failed' || status === 'completed') {
-                            await finalizeCurrentTurn();
+                            await finalizeSubagentTurn();
                         }
                     }
 
