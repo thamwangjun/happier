@@ -17,7 +17,6 @@ import * as z from 'zod';
 import { decodeBase64, encodeBase64 } from '@/api/encryption';
 import { logger } from '@/ui/logger';
 import { resolveMachineIdForServerFromSettings } from '@/daemon/resolveMachineIdForServerFromSettings';
-import type { McpToolsSettingsV1 } from '@/settings/mcpToolsSettings';
 
 async function bestEffortChmod(path: string, mode: number): Promise<void> {
   if (process.platform === 'win32') return;
@@ -114,8 +113,9 @@ export interface Settings {
   /**
    * Per-tool MCP enable/disable configuration (CLI-local; schema-validated).
    * Parsed/normalized by `settings/mcpToolsSettings.ts`.
+   * Stored as raw JSON — always access via `readMcpToolsSettingsV1(settings)`.
    */
-  mcpToolsSettingsV1?: McpToolsSettingsV1;
+  mcpToolsSettingsV1?: unknown;
 }
 
 const defaultSettings: Settings = {
@@ -445,7 +445,7 @@ export async function updateSettings(
 
   try {
     // Read current settings with defaults
-    const current = await readSettings() || { ...defaultSettings };
+    const current = await readSettings();
 
     // Apply update
     const updated = await updater(current);
