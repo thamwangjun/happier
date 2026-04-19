@@ -116,15 +116,15 @@ A developer can start an AI coding session on their machine and seamlessly conti
 
 ### Active
 
-*All v1.0 milestone requirements validated. Milestone complete.*
+*(Planning next milestone)*
 
 ### Recently Validated
 
 **MCP Tool Configuration (v1.0)**
-- Allow users to configure which tools the happier MCP bridge exposes via `~/.happier-dev/settings.json` — Validated in Phase 1
-- Per-tool enable/disable switches for the MCP surface — Validated in Phase 1
-- CLI reads and applies tool filter config at MCP server startup — Validated in Phase 2
-- Startup validation feedback: unknown tool names produce warn-level log; valid configs stay noise-free — Validated in Phase 3 (TOOLS-02, VALID-01)
+- ✓ `sessionAgentToolsSettingsV1` settings schema: per-tool enable/disable in `~/.happier-dev/settings.json`, opt-out model, no-throw reader — v1.0
+- ✓ Startup wiring: settings read once at `startHappyServer`, predicate threaded through `createHappierMcpServer` → `registerHappierMcpBuiltInTools` — v1.0
+- ✓ Tool registration filter: absent or missing key defaults to `enabled: true`; corrupt config falls back to all-tools-enabled with `logger.warn` — v1.0
+- ✓ Validation feedback: `findUnknownSessionAgentToolNames` warns on unrecognized tool names at startup without affecting valid entries — v1.0
 
 ### Out of Scope
 
@@ -157,6 +157,11 @@ A developer can start an AI coding session on their machine and seamlessly conti
 | Expo SDK for mobile with Tauri desktop | Single React Native codebase targets iOS, Android, web, macOS, and Windows | ✓ Good |
 | SQLite/PGLite "light" mode for self-hosting | Eliminates Postgres + Redis requirement for personal/small-team deploys | ✓ Good |
 | Yarn workspaces monorepo | All packages share a single lockfile; protocol types stay in sync across cli/server/ui | ✓ Good |
+| Schema in `apps/cli/src/settings/` not `packages/protocol` | Config is local-only (machine-side daemon); no mobile/server contract needed | ✓ Good — v1.0 |
+| Key name `sessionAgentToolsSettingsV1` (renamed from `mcpToolsSettingsV1`) | MCP is one surface; "sessionAgent" scopes correctly to CLI daemon agent tooling | ✓ Good — v1.0 |
+| Opt-out model: absent key = enabled | Existing users see no behavior change; no migration required when tools are added | ✓ Good — v1.0 |
+| Read settings once at startup, not per-request | Deterministic tool list per server lifecycle; avoids mid-session surprises | ✓ Good — v1.0 |
+| Pure `findUnknownSessionAgentToolNames` + call-site `logger.warn` | Separates validation logic from IO; enables clean unit testing without logger mocking | ✓ Good — v1.0 |
 
 ## Evolution
 
@@ -176,14 +181,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-## Current Milestone: v1.0 MCP Tool Configuration
-
-**Goal:** Allow users to configure which tools the happier MCP bridge exposes via a persistent settings JSON file at `~/.happier-dev/settings.json`.
-
-**Target features:**
-- Per-tool enable/disable switches for the MCP bridge surface in `~/.happier-dev/settings.json`
-- CLI reads and applies tool filter config at MCP server startup
-- Settings file format that is easy to hand-edit
-
----
-*Last updated: 2026-04-19 — Phase 3 complete, Milestone v1.0 all phases done*
+*Last updated: 2026-04-19 — after v1.0 milestone (MCP Tool Configuration)*
