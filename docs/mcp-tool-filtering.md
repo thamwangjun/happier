@@ -98,6 +98,59 @@ If you previously disabled a tool and want to re-enable it, set `"enabled": true
 }
 ```
 
+#### Example D — Disable all tools
+
+Run the agent with no Happier tools exposed. This is useful for locked-down sessions where you want the agent to rely solely on its built-in capabilities and any tools you provide through other MCP servers:
+
+```json
+{
+  "sessionAgentToolsSettingsV1": {
+    "v": 1,
+    "tools": {
+      "change_title": { "enabled": false },
+      "action_execute": { "enabled": false },
+      "execution_run_start": { "enabled": false },
+      "action_options_resolve": { "enabled": false },
+      "action_spec_get": { "enabled": false },
+      "action_spec_search": { "enabled": false },
+      "agents_backends_list": { "enabled": false },
+      "agents_models_list": { "enabled": false },
+      "execution_run_action": { "enabled": false },
+      "execution_run_get": { "enabled": false },
+      "execution_run_list": { "enabled": false },
+      "execution_run_send": { "enabled": false },
+      "execution_run_stop": { "enabled": false },
+      "execution_run_wait": { "enabled": false },
+      "memory_ensure_up_to_date": { "enabled": false },
+      "memory_get_window": { "enabled": false },
+      "memory_search": { "enabled": false },
+      "review_start": { "enabled": false },
+      "session_activity_get": { "enabled": false },
+      "session_archive": { "enabled": false },
+      "session_history_get": { "enabled": false },
+      "session_list": { "enabled": false },
+      "session_message_send": { "enabled": false },
+      "session_messages_recent_get": { "enabled": false },
+      "session_model_set": { "enabled": false },
+      "session_permission_mode_set": { "enabled": false },
+      "session_permission_respond": { "enabled": false },
+      "session_spawn_new": { "enabled": false },
+      "session_status_get": { "enabled": false },
+      "session_stop": { "enabled": false },
+      "session_target_primary_set": { "enabled": false },
+      "session_target_tracked_set": { "enabled": false },
+      "session_title_set": { "enabled": false },
+      "session_unarchive": { "enabled": false },
+      "session_user_action_answer": { "enabled": false },
+      "session_wait_idle": { "enabled": false },
+      "subagents_delegate_start": { "enabled": false },
+      "subagents_plan_start": { "enabled": false },
+      "voice_agent_start": { "enabled": false }
+    }
+  }
+}
+```
+
 ### Error handling
 
 - If `sessionAgentToolsSettingsV1` is **absent or malformed**, the CLI silently falls back to defaults (all tools enabled). The daemon will not fail to start.
