@@ -114,24 +114,12 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tauri macOS/Windows desktop app (wrapping Expo web export) — existing
 - ✓ Desktop auto-updater — existing
 
-### Active
-
-**v1.1 — Distinguish Parent vs Subagent Turn Completion (Claude backend)**
-- [ ] Add `isSubagent: boolean` parameter to `finalizeCurrentTurn()` in `claudeRemoteAgentSdk.ts`
-- [ ] Gate `opts.onReady()` behind `if (!isSubagent)` — suppress ready notification on subagent completion
-- [ ] Wire `finalizeCurrentTurn(false)` on `SDKResultMessage` (parent) path, `finalizeCurrentTurn(true)` on `task_notification` (subagent) path
-- [ ] Trace `onReady` → `readyHandler` call graph in `claudeRemoteLauncher.ts` to confirm no session-loop side effects
-
-## Current Milestone: v1.1 Distinguish Parent vs Subagent Turn Completion
-
-**Goal:** Stop the Claude backend from firing the `ready` notification on subagent turn completion — only the parent agent turn completion should trigger it.
-
-**Target features:**
-- Parameterize `finalizeCurrentTurn()` with `isSubagent` flag
-- Gate `opts.onReady()` on parent-only path
-- Verify no session-loop regressions
-
-### Recently Validated
+**Turn Completion Distinction (v1.1)**
+- ✓ Two-function split: `finalizeCurrentTurn()` (parent path, Phase A + Phase B) and `finalizeSubagentTurn()` (subagent path, Phase A only) in `claudeRemoteAgentSdk.ts` — v1.1
+- ✓ Phase A bookkeeping (`activeTaskId = null`, `updateThinking(false)`, transcript flush) runs on both parent and subagent paths — v1.1
+- ✓ Phase B notification (`opts.onReady()`, `scheduleNextMessagePump()`) suppressed on subagent path — v1.1
+- ✓ `messageQueue.flush()` in `onReady` lambda runs unconditionally; only `readyHandler()` is gated — v1.1
+- ✓ TURN-06: subagent completion followed by parent completion fires exactly one `ready` event — v1.1
 
 **MCP Tool Configuration (v1.0)**
 - ✓ `sessionAgentToolsSettingsV1` settings schema: per-tool enable/disable in `~/.happier-dev/settings.json`, opt-out model, no-throw reader — v1.0
@@ -139,11 +127,17 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tool registration filter: absent or missing key defaults to `enabled: true`; corrupt config falls back to all-tools-enabled with `logger.warn` — v1.0
 - ✓ Validation feedback: `findUnknownSessionAgentToolNames` warns on unrecognized tool names at startup without affecting valid entries — v1.0
 
+### Active
+
+*(No active requirements — planning next milestone)*
+
 ### Out of Scope
 
 - Per-project `.mcp.json` overrides (deferred — user-global settings first)
 - Remote/server-side tool configuration
-- UI for editing settings (hand-edit only for v1.0)
+- UI for editing MCP tool settings (hand-edit only for v1.0)
+- `isSubagent` flag parameter on `finalizeCurrentTurn()` — replaced by two-function split (cleaner API) — v1.1
+- `resetTurnDiagnostics()` subagent gating — deferred; `didFlushTranscriptCleanly` advisory issued but full-turn diagnostics gate not needed for v1.1
 
 ## Context
 
@@ -175,6 +169,9 @@ A developer can start an AI coding session on their machine and seamlessly conti
 | Opt-out model: absent key = enabled | Existing users see no behavior change; no migration required when tools are added | ✓ Good — v1.0 |
 | Read settings once at startup, not per-request | Deterministic tool list per server lifecycle; avoids mid-session surprises | ✓ Good — v1.0 |
 | Pure `findUnknownSessionAgentToolNames` + call-site `logger.warn` | Separates validation logic from IO; enables clean unit testing without logger mocking | ✓ Good — v1.0 |
+| Two-function split (`finalizeCurrentTurn` + `finalizeSubagentTurn`) over `isSubagent` flag | Eliminates flag argument anti-pattern; each function has a single, clear responsibility | ✓ Good — v1.1 |
+| `didFlushTranscriptCleanly` flag to suppress redundant flush on clean turn-end | Required to make TEST-03 green without modifying test mocks; avoids double-flush side effect | ✓ Good — v1.1 |
+| TDD RED→GREEN for turn completion split | Contract established in failing tests before implementation; prevented scope creep and caught TEST-03a double-flush early | ✓ Good — v1.1 |
 
 ## Evolution
 
@@ -194,4 +191,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 — Phase 5 complete: TURN-06 verified (baseline and multi-subagent turn completion tests passing GREEN)*
+*Last updated: 2026-04-20 after v1.1 milestone — Distinguish Parent vs Subagent Turn Completion shipped*

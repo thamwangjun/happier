@@ -47,6 +47,52 @@
 
 ---
 
+## Milestone: v1.1 — Distinguish Parent vs Subagent Turn Completion
+
+**Shipped:** 2026-04-20
+**Phases:** 2 | **Plans:** 3 | **Timeline:** 2 days (2026-04-19 → 2026-04-20)
+
+### What Was Built
+
+- `finalizeSubagentTurn()` closure in `claudeRemoteAgentSdk.ts`: Phase A bookkeeping only (no ready notification)
+- `finalizeCurrentTurn()` retained for parent path with full Phase A + Phase B logic
+- `onSubagentFlush?` optional callback added to opts type; wired in `claudeRemoteLauncher.ts`
+- 4 subagent turn completion tests (TEST-01–03b) + 2 TURN-06 baseline/multi-subagent tests — all GREEN
+- VERIFICATION.md with SC-1 code inspection evidence at exact source lines
+
+### What Worked
+
+- **TDD RED→GREEN** — writing 3 failing tests before implementation locked the behavioral contract and caught the double-flush bug (TEST-03a) before code was written; saved a debugging cycle
+- **Two-function split over flag argument** — eliminating `isSubagent: boolean` in favor of `finalizeSubagentTurn()` produced cleaner call sites with no conditional logic at the point of use
+- **Parameterised test factory `makeBaselineQuery(taskCount, includeResult)`** — a single factory covered both TURN-06 baseline (taskCount=0) and multi-subagent (taskCount=2) scenarios without duplicating loop logic
+- **VERIFICATION.md with exact line citations** — reading `claudeRemoteAgentSdk.ts` before writing the verification doc and citing exact line numbers (1554–1561) gave high-confidence SC-1 evidence
+
+### What Was Inefficient
+
+- **REQUIREMENTS.md checkboxes not updated during execution** — same issue as v1.0; traceability table was updated but raw `[ ]` checkboxes were not ticked off at plan completion. Reconciled at milestone close.
+- **ROADMAP.md progress table stayed "Not started"** — carried over from v1.0; same fix needed: update at phase completion, not just milestone close.
+- **Worktree path confusion in Phase 5** — the Write tool wrote to the main repo path instead of the active worktree; required manual copy + removal before commit. Worktree discipline needs to be explicitly verified before each Write in worktree sessions.
+
+### Patterns Established
+
+- **Two-function split for behavioral branching** — prefer `functionA()` / `functionB()` over `function(flag: boolean)` when branches share a prefix but diverge at a clear boundary; eliminates flag argument anti-pattern and makes call sites self-documenting
+- **`didFlushTranscriptCleanly` guard for conditional flush suppression** — when a clean-path flush must prevent a redundant safety-flush, use a boolean flag set by the clean path rather than restructuring the control flow
+- **TDD RED phase as spec validation** — running tests in RED before implementation confirms the test contract is correct and that the production bug is exercised; don't skip RED even on small refactors
+
+### Key Lessons
+
+1. Tick off REQUIREMENTS.md checkboxes at each plan completion — do not defer to milestone close (second time this has been an issue)
+2. Update ROADMAP.md progress table status at phase completion, not only at milestone close
+3. In worktree sessions, verify the active path before Write/Edit to avoid writing to the main repo accidentally
+
+### Cost Observations
+
+- Sessions: ~3 sessions across 2 days
+- Commits: 31 (v1.1 range)
+- Notable: small milestone (2 phases, 3 plans) executed in ~36 min total plan time; TDD RED phase added ~5 min but prevented a regression
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -54,14 +100,17 @@
 | Milestone | Phases | Plans | Key Change |
 |-----------|--------|-------|------------|
 | v1.0 | 3 | 5 | First milestone on this fork; established settings schema + startup wiring patterns |
+| v1.1 | 2 | 3 | TDD RED→GREEN introduced; two-function split over flag argument established as pattern |
 
 ### Cumulative Quality
 
 | Milestone | Tests Added | Key Coverage |
 |-----------|-------------|--------------|
 | v1.0 | ~16 (unit + integration) | `sessionAgentToolsSettings.ts`, `startHappyServer` tool filtering |
+| v1.1 | 6 (unit, TDD) | `claudeRemoteAgentSdk` subagent/parent turn completion paths, TURN-06 baseline + multi-subagent |
 
 ### Top Lessons (Verified Across Milestones)
 
-1. Keep traceability artifacts (REQUIREMENTS.md, ROADMAP.md) in sync during execution, not just at milestone close
+1. Keep traceability artifacts (REQUIREMENTS.md, ROADMAP.md) in sync during execution, not just at milestone close — confirmed across v1.0 and v1.1
 2. Pure functions + call-site IO is the right separation for validation + logging patterns
+3. TDD RED phase is worth the 5 min overhead — behavioral contract locked before implementation prevents regressions and scope creep

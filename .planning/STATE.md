@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Distinguish Parent vs Subagent Turn Completion
-status: executing
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-20T07:08:26.555Z"
+status: complete
+stopped_at: Milestone v1.1 shipped
+last_updated: "2026-04-20T08:30:00.000Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 2
@@ -18,41 +18,34 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-19)
+See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Control AI coding agent sessions remotely from any device, with end-to-end encryption.
-**Current focus:** Phase 05 — verify-end-to-end-behavior
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 05
-Plan: Not started
-Status: Executing Phase 05
+Phase: —
+Plan: —
+Status: Milestone v1.1 complete — planning next milestone
 Last activity: 2026-04-20
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
 
 - Total plans completed: 3
-- Average duration: —
-- Total execution time: —
+- Average duration: ~12 min/plan
+- Total execution time: ~36 min (Phase 4: ~24 min, Phase 5: ~12 min)
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 4 | 0 | — | — |
-| 5 | 0 | — | — |
-| 04 | 2 | - | - |
-| 05 | 1 | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: —
-- Trend: —
+| 04 | 2 | ~24 min | ~12 min |
+| 05 | 1 | ~12 min | ~12 min |
 
 *Updated after each plan completion*
 
@@ -60,19 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 ### Decisions
 
-All v1.0 decisions captured in PROJECT.md Key Decisions table.
-
-Recent decisions affecting current work:
-
-- Research confirmed: `didFinalizeTurn` and `awaitingNextTurnStart` must be INSIDE the `!isSubagent` gate — placing them before the gate silently drops the parent's onReady()
-- Research confirmed: `messageQueue.flush()` in claudeRemoteLauncher.ts must remain unconditional
-
-### Context from Investigation
-
-- Key file: `apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.ts` — `finalizeCurrentTurn` ~line 1158; `task_notification` ~line 1529; `result` ~lines 1603-1607
-- Key file: `apps/cli/src/backends/claude/remote/claudeRemoteLauncher.ts` — `onReady` lambda ~line 178; `readyHandler` ~line 992
-- SDK invariant (observed, not guaranteed): `result` messages are parent-only; `task_notification` messages are subagent-only
-- Codex reference: `apps/cli/src/backends/codex/appServer/runtime.ts` uses `finalizeSyntheticSubagentThread` for same intent
+All v1.1 decisions captured in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
@@ -91,6 +72,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-20T06:38:42.185Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-verify-end-to-end-behavior/05-CONTEXT.md
+Last session: 2026-04-20
+Stopped at: Milestone v1.1 complete
+Resume file: Run /gsd-new-milestone to start next milestone
