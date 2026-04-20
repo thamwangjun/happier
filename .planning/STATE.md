@@ -5,7 +5,7 @@ milestone_name: (planning)
 status: planning
 stopped_at: Milestone v1.0 complete
 last_updated: "2026-04-19T00:00:00.000Z"
-last_activity: 2026-04-19
+last_activity: 2026-04-20
 progress:
   total_phases: 0
   completed_phases: 0
@@ -40,6 +40,12 @@ All v1.0 decisions captured in PROJECT.md Key Decisions table.
 ### Blockers/Concerns
 
 *(none)*
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260420-hoa | Write docs on configuring sessionAgentToolsSettingsV1 MCP tool filtering in settings.json | 2026-04-20 | eaf0bb1b5 | [260420-hoa-write-docs-on-configuring-sessionagentto](.planning/quick/260420-hoa-write-docs-on-configuring-sessionagentto/) |
 
 ## Deferred Items
 
