@@ -1,175 +1,205 @@
-# Feature Analysis: MCP Tool Configuration (Per-Tool Enable/Disable)
+# Feature Behavior: Parent vs Subagent Turn Completion
 
-**Domain:** Developer tooling — MCP bridge tool filtering for AI coding agents
-**Researched:** 2026-04-18
-**Overall confidence:** HIGH (codebase verified; ecosystem patterns confirmed via multiple sources)
-
----
-
-## Context
-
-The existing Happier MCP bridge (`apps/cli/src/mcp/`) exposes built-in tools to AI agents. The tool catalog is built from `HAPPIER_BUILT_IN_TOOLS` (in `catalog.ts`), which merges `MANUAL_TOOLS` (`change_title`, `action_execute`, `execution_run_start`) with action-backed tools from protocol's `listActionSpecs()`. A surface-based filter (`listBuiltInHappierTools`) already gates which tools appear on each surface (`mcp`, `session_agent`, `cli`). The missing piece: a user-editable settings file that further controls which named tools are exposed on the MCP surface.
-
-The existing pattern for action enablement (`ActionsSettingsV1Schema`, `HAPPIER_ACTIONS_SETTINGS_V1` env var, `isActionEnabledByActionsSettings`) is the closest prior art in this codebase. It uses `{ v: 1, actions: { "action.id": { enabled: false } } }`.
-
-The settings file lives at `~/.happier-dev/settings.json` (path: `configuration.settingsFile`). It is read by `readSettings()` in `persistence.ts`, which merges with defaults and tolerates unknown fields via a merge strategy.
+**Project:** Happier — v1.1 distinguish parent vs subagent turn completion
+**Researched:** 2026-04-19
+**Confidence:** HIGH (all findings from direct codebase inspection)
 
 ---
 
-## Table Stakes
+## Ready Signal Semantics
 
-Features users expect. Missing = the feature feels incomplete or untrustworthy.
+### What `opts.onReady()` does (call graph, verified)
 
-| Feature | Why Expected | Complexity | Confidence |
-|---------|-------------|------------|------------|
-| Per-tool `enabled: false` switch by exact tool name | The foundational ask — users must be able to suppress a specific tool | Low | HIGH (codebase pattern exists in `ActionsSettingsV1Schema`) |
-| All-tools-on by default (opt-out, not opt-in) | Users expect existing MCP tools to keep working without editing settings | Low | HIGH (universal pattern across Claude Code, OpenCode, VS Code Copilot) |
-| Settings in `~/.happier-dev/settings.json` | Consistent with existing `Settings` struct and `configuration.settingsFile` | Low | HIGH (PROJECT.md specifies this path) |
-| Graceful handling of unknown tool names in config | A tool name may be mis-typed or a tool may be removed in a future version — the CLI must not crash | Low | HIGH (OpenCode, Claude Code both silently ignore unknown; ecosystem standard) |
-| Settings take effect at MCP server startup | Consistent with how `HAPPIER_ACTIONS_SETTINGS_V1` is read — at startup, not hot-reloaded | Low | HIGH (matches existing `listBuiltInHappierTools` call-site in `startHappyServer.ts`) |
-| JSON format, hand-editable | PROJECT.md: "Settings file format that is easy to hand-edit" | Low | HIGH (explicit requirement) |
+In `claudeRemoteAgentSdk.ts`, `finalizeCurrentTurn()` (line 1158) calls `opts.onReady()` as its last substantive action before `scheduleNextMessagePump()`. The internal work before `opts.onReady()`:
 
----
+1. Set `didFinalizeTurn = true`, `awaitingNextTurnStart = true`, `activeTaskId = null`
+2. Call `updateThinking(false)` — stops the thinking spinner
+3. Flush `streamedTranscriptWriter` (transcript committed to server)
+4. Log turn diagnostics and reset them via `resetTurnDiagnostics()`
+5. Optionally emit a `completionEvent` string to the mobile UI
 
-## Differentiators
+`opts.onReady()` is wired in `claudeRemoteLauncher.ts` (line 992):
 
-Features that add value beyond the minimum. Not expected by users, but worthwhile.
+```typescript
+onReady: async () => {
+    await messageQueue.flush();
+    readyHandler();
+},
+```
 
-| Feature | Value Proposition | Complexity | Confidence |
-|---------|------------------|------------|------------|
-| Warn (log) on unknown tool names in config | Developer-facing tooling should surface mis-typed tool names at startup rather than silently ignoring; turns a silent no-op into an actionable log line | Low | MEDIUM (ecosystem tooling generally fails silently; explicit warning is a quality step-up) |
-| Expose enabled tool list in `happier mcp status` or similar CLI | Lets users verify what was actually applied without reading source code | Low | MEDIUM (VS Code surfaces this via `/mcp` panel; Claude Code via tool discovery) |
-| `mcpToolsSettingsV1` versioned key in settings.json | Mirrors `actionsSettingsV1` / `mcpServersSettingsV1` naming convention — forward-compatible, can evolve schema version independently | Low | HIGH (codebase convention: `readMcpServersSettingsFromAccountSettings` uses `mcpServersSettingsV1` key) |
-| `enabled: true` explicit opt-in (useful if a future "strict mode" default-deny is ever added) | Enables future strict mode without a breaking schema change | Low | LOW (premature for v1.0; adds schema complexity for no immediate use) |
+`readyHandler` is created by `createClaudeRemoteReadyHandler()` (line 847). That function (line 161) does:
 
----
+1. **Guard check:** if `pending` is non-null or `session.queue.size() !== 0`, return immediately without sending anything. The ready signal is suppressed when new messages are already queued.
+2. If no `pushSender`, call `session.sendSessionEvent({ type: 'ready' })` directly.
+3. If `pushSender` exists, call `sendReadyWithPushNotification()` which calls `sendSessionEvent({ type: 'ready' })` AND optionally sends a push notification to all registered devices.
 
-## Anti-Features / Out of Scope
+### Where does `{ type: 'ready' }` go?
 
-Features to explicitly exclude from v1.0 scope, with rationale.
+`sendSessionEvent` is an RPC call over the existing Socket.IO session client. The relay server receives it and fans it out to all connected clients (mobile app, web UI, Tauri desktop) as a session event message.
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|-------------|-----------|-------------------|
-| Per-project `.mcp.json` overrides | PROJECT.md explicitly defers this: "user-global settings first" | Implement in a later milestone once global settings pattern is proven |
-| Remote / server-side tool configuration | Would require server schema changes and E2E encryption considerations; out of scope for a local config file feature | Keep config purely local (`~/.happier-dev/settings.json`) |
-| UI for editing tool settings | PROJECT.md: "hand-edit only for v1.0" | Implement in a later milestone after format is stable |
-| Wildcard / glob-based tool matching | Adds complexity with minimal v1.0 benefit given the small tool catalog; Claude Code feature request for this was filed but not shipped as of 2026-04 | Exact name matching only for v1.0; extend later if catalog grows |
-| Category-based grouping | No category taxonomy exists on `HappierBuiltInToolDefinition`; inventing one now adds scope | Defer until category metadata is modeled |
-| Hot-reload / watch of settings file | Requires daemon-side file watcher; the existing `HAPPIER_ACTIONS_SETTINGS_V1` pattern is startup-read-only | Read at startup; document that daemon restart is required |
-| Regex / pattern matching | Adds parser complexity and attack surface; not needed for a small static tool catalog | Exact names only |
-| Tool-level approval required (approve/deny mode) | The existing `ActionsSettingsV1Schema` already handles approval at the action level; duplicating that concern in tool settings is confusing | Use `actionsSettingsV1` approval surfaces if per-action approval is needed |
+On the mobile/web UI side, `sync.ts` (line 3500) processes incoming messages through the reducer. The `messageToEventConversion.ts` phase (line 48) detects `msg.role === 'event' && msg.content.type === 'ready'`:
 
----
+- The message is **filtered out of the transcript** — it creates no visible chat bubble
+- It sets `hasReadyEvent = true` and records `readyAt` (the message timestamp)
+- This propagates back to `sync.ts` (line 3500-3503):
 
-## Settings File Format
-
-### Recommendation: Exact Name Map, `enabled` Boolean, Opt-Out Default
-
-Use a flat `Record<toolName, { enabled: boolean }>` under a versioned key `mcpToolsSettingsV1` in `~/.happier-dev/settings.json`. This matches the existing `actionsSettingsV1` and `mcpServersSettingsV1` patterns in the codebase exactly.
-
-**Confidence: HIGH** — Pattern is consistent with `ActionsSettingsV1Schema` (codebase verified), `McpServersSettingsV1Schema` (codebase verified), and the VS Code / OpenCode ecosystem norm of a versioned settings blob.
-
-### Concrete format
-
-```json
-{
-  "schemaVersion": 6,
-  "mcpToolsSettingsV1": {
-    "v": 1,
-    "tools": {
-      "change_title": { "enabled": false },
-      "execution_run_start": { "enabled": false }
-    }
-  }
+```typescript
+if (result.hasReadyEvent) {
+    voiceHooks.onReady(sessionId, m);
+    notifyActivityReady(sessionId, m);
 }
 ```
 
-### Field semantics
+`notifyActivityReady` feeds into `ActivityLocalNotificationRuntime` which fires a local OS notification (Tauri or Expo) if the user is not currently viewing that session.
 
-| Field | Type | Default | Meaning |
-|-------|------|---------|---------|
-| `mcpToolsSettingsV1.v` | `1` (literal) | required | Schema version; allows future migration without breaking parsing |
-| `mcpToolsSettingsV1.tools` | `Record<string, { enabled: boolean }>` | `{}` | Per-tool overrides; absent = enabled |
-| `tools["<name>"].enabled` | `boolean` | `true` (implicit) | `false` suppresses the tool from the MCP surface |
+### What the `ready` event does NOT do directly
 
-### Why not alternatives
+The `ready` event does not itself flip `session.thinking` to `false`. That is done separately through the task lifecycle path (`turn_aborted` / `task_complete` agent messages handled in `sync.ts` line 2558). The thinking state update and the `ready` signal are independent flows. The `ready` event's job is specifically:
 
-| Option | Why Rejected |
-|--------|-------------|
-| Allowlist array `["tool_a", "tool_b"]` | Requires editing the list every time a new tool is added; breaks new tools silently; opt-in semantics differ from every comparable tool in the ecosystem |
-| Denylist array `["tool_a"]` | Simpler but loses extensibility — can't add per-tool metadata later (e.g. approval mode) without a format break |
-| Glob patterns | Not needed for a static 10–20 tool catalog; adds regex/glob parser complexity |
-| Top-level `disabledMcpTools: ["tool_a"]` | Flat arrays can't carry per-tool metadata; not forward-compatible; inconsistent with existing schema patterns |
-| Separate config file | Splits the mental model; `settings.json` is already the established home for daemon settings |
+1. Signal that the agent is awaiting user input (enables input field in UI)
+2. Trigger push notifications to the user's devices
+3. Trigger local OS notifications on the active device if the user is not viewing the session
+4. Trigger voice session hooks for ElevenLabs/LiveKit voice turn management
 
-### Unknown tool name handling
+The reducer also uses `readyAt` to cancel any tool calls still marked as running (spinners), as defensive cleanup for dropped events during reconnects (reducer.ts lines 542-549).
 
-**Recommendation: silently ignore unknown tool names, log at DEBUG level.**
+---
 
-Rationale: the existing `ActionsSettingsV1Schema` transform silently drops unknown action ids (`if (!parsedId.success) continue;`). Matching this behavior ensures consistency and prevents crashes when tools are renamed or removed in future versions. A DEBUG-level log line (not WARN, not ERROR) is the right addition — it helps developers who mis-type a name without alarming users who have an older settings file.
+## User-Visible Impact
 
-This matches ecosystem practice: Claude Code ignores unknown MCP server config keys, OpenCode ignores unknown tools in its permission map.
+### When the parent agent completes a turn (correct behavior)
 
-### Zod schema pattern (mirrors existing codebase style)
+The parent agent emitting `SDKResultMessage` (or a `task_notification` with `status: completed` for the root task) means the entire Claude Code session has finished processing and is waiting for user input. At this point:
+
+- The input field in the mobile/web UI should become enabled (no longer blocked by "agent is thinking")
+- The thinking spinner stops
+- Push notifications are sent to all paired devices ("Claude is ready")
+- Local OS notifications fire if the user is not viewing the session
+- Voice session hooks fire for voice turn handoff
+- The message queue is flushed so all pending conversation messages are delivered before the ready signal
+
+This is the correct moment to call `readyHandler()`.
+
+### When a subagent completes (premature behavior, current bug)
+
+When Claude Code uses agent teams (`claudeCodeExperimentalAgentTeamsEnabled`), it spawns subagents as tasks. A `task_notification` with `status: completed` or `stopped` fires for each subagent that finishes — before the parent agent has completed its own turn.
+
+`finalizeCurrentTurn()` is called on that `task_notification` path (claudeRemoteAgentSdk.ts lines 1535-1537):
 
 ```typescript
-const McpToolOverrideSchema = z.object({
-  enabled: z.boolean().optional(),
-}).strict();
-
-export const McpToolsSettingsV1Schema = z
-  .object({
-    v: z.literal(1),
-    tools: z.record(z.string(), McpToolOverrideSchema).default({}),
-  })
-  .passthrough()
-  .transform((value) => {
-    // Filter to known tool names; unknown keys are silently dropped (matches ActionsSettingsV1Schema pattern)
-    const next: Record<string, McpToolOverride> = {};
-    for (const [name, override] of Object.entries(value.tools ?? {})) {
-      if (HAPPIER_BUILT_IN_TOOL_NAMES.includes(name as any)) {
-        next[name] = override;
-      }
-      // else: unknown name — silently ignore (log at DEBUG in caller)
+} else if (subtype === 'task_notification') {
+    ...
+    if (status === 'stopped' || status === 'failed' || status === 'completed') {
+        await finalizeCurrentTurn();
     }
-    return { v: 1 as const, tools: next };
-  });
+}
 ```
+
+Currently this calls `opts.onReady()` unconditionally, meaning all of the above user-visible actions fire while the parent agent is still running.
 
 ---
 
-## Feature Dependencies
+## Premature Ready Consequences
 
-```
-Settings file read (persistence.ts readSettings) → parse mcpToolsSettingsV1 → filter in listBuiltInHappierTools
+### Consequence 1: False "done" push notifications (HIGH severity)
+
+The user receives a device push notification saying Claude is finished, taps into the app, and sees the agent still running. This is a broken UX trust signal. If a multi-agent run uses several subagents, the user receives spam notifications during what should be a single uninterrupted turn.
+
+**Source:** `sendReadyWithPushNotification` is called via `readyHandler()` — which fires on every `finalizeCurrentTurn()` call that passes the guard.
+
+### Consequence 2: Premature input enablement (HIGH severity)
+
+The mobile UI receives `{ type: 'ready' }` from the server. The reducer sets `hasReadyEvent = true`. Any UI that gates user input on thinking/ready state displays the input field as active while the parent agent is still executing.
+
+If the user sends a message, the daemon's `waitForMessagesOrPending` picks it up and pushes it into the `PushableAsyncIterable` feeding the Claude Agent SDK — injecting a user message into an in-flight turn, which causes context corruption or unexpected Claude behavior.
+
+### Consequence 3: Suppressed legitimate parent-completion ready (HIGH severity)
+
+This is the most insidious consequence. The `readyHandler` guard (lines 175-176):
+
+```typescript
+if (params.getPending()) return;
+if (params.getQueueSize() !== 0) return;
 ```
 
-The filter should be applied inside `listBuiltInHappierTools` (or a wrapper) when `surface === 'mcp'`, after the existing surface filter. No changes required to the MCP server registration layer (`registerHappierMcpBuiltInTools`) or the protocol package.
+Additionally, `finalizeCurrentTurn()` sets `didFinalizeTurn = true` on line 1160. The parent's `result` message path checks this guard at line 1597:
+
+```typescript
+if (didFinalizeTurn) {
+    continue;
+}
+```
+
+This means: if the subagent completion fires `finalizeCurrentTurn()` first and sets `didFinalizeTurn = true`, the parent's `result` message is silently skipped. **The parent-completion ready never fires.** The user never receives the legitimate "Claude is done" notification for the actual turn boundary.
+
+This is why `didFinalizeTurn = true` must also be gated behind `if (!isSubagent)` in the fix — not just `opts.onReady()`.
+
+### Consequence 4: Voice session hooks fire at wrong time (MEDIUM severity)
+
+`voiceHooks.onReady(sessionId, m)` is called in `sync.ts` when `hasReadyEvent` is true. This advances the voice conversation turn state. Firing on subagent completion incorrectly signals voice turn end, which may cut off the voice assistant's listening state or advance to the next turn prompt prematurely.
+
+### Consequence 5: Redundant transcript flushes and diagnostic resets (LOW severity)
+
+`flushStreamedTranscriptWriter('turn-end')` and `resetTurnDiagnostics()` fire in `finalizeCurrentTurn()`. On subagent completion, the transcript flush is legitimate (subagent output should be committed). However `resetTurnDiagnostics()` resets counters mid-parent-turn, so parent-turn diagnostics logged at actual turn end reflect only post-subagent activity, not the full turn. This is a logging/observability issue, not a user-facing correctness issue.
+
+### What does NOT break
+
+The transcript itself is correct. Subagent messages flow through the sidechain mechanism (`parent_tool_use_id`) and the main-chain transcript is unaffected by `finalizeCurrentTurn()` being called prematurely on the content side.
 
 ---
 
-## MVP Recommendation
+## Fix Constraints
 
-1. Add `McpToolsSettingsV1Schema` to `packages/protocol/src/` (or `apps/cli/src/settings/`) — mirrors `ActionsSettingsV1Schema` structure
-2. Add `mcpToolsSettingsV1` key to `Settings` interface in `persistence.ts` (opaque `unknown`, like `memory`) — parsed by a dedicated reader
-3. Add `readMcpToolsSettingsFromSettings(settings: Settings): McpToolsSettingsV1` reader (mirrors `readMcpServersSettingsFromAccountSettings`)
-4. Add `isMcpToolEnabledBySettings(toolName: string, settings: McpToolsSettingsV1): boolean` (mirrors `isActionEnabledByActionsSettings`)
-5. Thread through `listBuiltInHappierTools` when `surface === 'mcp'`
-6. Log unknown tool names at DEBUG in the reader (not in the filter loop, to avoid noise per-request)
+### `isSubagent` must gate both `opts.onReady()` AND `didFinalizeTurn = true`
 
-Defer: wildcard support, per-project overrides, UI, hot-reload.
+Gating only `opts.onReady()` is insufficient. The `didFinalizeTurn` flag prevents the parent's `result` message from triggering a second `finalizeCurrentTurn()` call (line 1597 guard). Without also gating `didFinalizeTurn`, the real parent completion boundary is silently dropped and `opts.onReady()` never fires for the parent turn.
+
+The correct approach:
+
+```typescript
+const finalizeCurrentTurn = async (isSubagent: boolean, params?: { completionEvent?: string }) => {
+    if (!isSubagent) {
+        if (didFinalizeTurn) return;
+        didFinalizeTurn = true;
+        awaitingNextTurnStart = true;
+    }
+    activeTaskId = null;
+    updateThinking(false);
+    // ... flush transcript, log diagnostics, reset diagnostics ...
+    if (params?.completionEvent) {
+        opts.onCompletionEvent?.(params.completionEvent);
+    }
+    if (!isSubagent) {
+        await opts.onReady();
+    }
+    scheduleNextMessagePump();
+};
+```
+
+### `scheduleNextMessagePump()` must still run on subagent completion
+
+The message pump must stay active while the parent is still running. `scheduleNextMessagePump` is idempotent (`if (nextMessagePump) return;`) so calling it on subagent events is safe and necessary.
+
+### Call sites
+
+From code inspection, three call sites of `finalizeCurrentTurn()`:
+
+1. **`task_notification` with `stopped/failed/completed` status (line 1536):** Subagent path. Use `finalizeCurrentTurn(true)`.
+2. **`result` message path (line 1607):** Parent agent completing its turn. Use `finalizeCurrentTurn(false)`.
+3. **Compact command paths (lines 1554, 1603):** Session-level operation, parent context. Use `finalizeCurrentTurn(false)`.
 
 ---
 
 ## Sources
 
-- Codebase: `apps/cli/src/settings/actionsSettings.ts` — existing `ActionsSettingsV1` pattern (HIGH confidence)
-- Codebase: `packages/protocol/src/actions/actionSettings.ts` — Zod schema for action settings (HIGH confidence)
-- Codebase: `packages/protocol/src/account/settings/accountSettings.ts` — `actionsSettingsV1` field in `AccountSettings`, default settings for `session_agent` surface (HIGH confidence)
-- Codebase: `apps/cli/src/mcp/servers/readMcpServersSettingsFromAccountSettings.ts` — `mcpServersSettingsV1` pattern (HIGH confidence)
-- Codebase: `apps/cli/src/agent/tools/happierTools/listBuiltInHappierTools.ts` — where surface filter applies (HIGH confidence)
-- Codebase: `apps/cli/src/persistence.ts` — `Settings` struct and `readSettings()` function (HIGH confidence)
-- Ecosystem: GitHub issue anthropics/claude-code#7328 — Claude Code per-tool MCP filtering (requested, not yet shipped as of 2026-04) (MEDIUM confidence)
-- Ecosystem: OpenCode docs `opencode.ai/docs/tools/` — `permission: { "toolName": "allow|deny|ask", "mymcp_*": "ask" }` pattern (MEDIUM confidence)
-- Ecosystem: VS Code MCP config reference — server-level enable/disable; no per-tool API exposed yet (MEDIUM confidence)
-- Ecosystem: `@respawn-app/tool-filter-mcp` npm package — allowlist/denylist CLI proxy approach (LOW confidence; proxy pattern is not the right fit for built-in tools)
+All findings are from direct codebase inspection (HIGH confidence):
+
+- `apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.ts` — `finalizeCurrentTurn()` body, `task_notification` handler, `result` message handler, `didFinalizeTurn` guard
+- `apps/cli/src/backends/claude/claudeRemoteLauncher.ts` — `createClaudeRemoteReadyHandler()`, `onReady` wiring, `readyHandler` guard logic
+- `apps/ui/sources/sync/reducer/phases/messageToEventConversion.ts` — `ready` event filtering, `hasReadyEvent` / `readyAt` propagation
+- `apps/ui/sources/sync/reducer/reducer.ts` — `cancelRunningTools` on `readyAt`
+- `apps/ui/sources/sync/sync.ts` — `notifyActivityReady()` and `voiceHooks.onReady()` on `hasReadyEvent`
+- `apps/ui/sources/activity/notifications/runtime/ActivityLocalNotificationRuntime.tsx` — local OS notification on ready
+- `apps/ui/sources/activity/notifications/runtime/activityLocalNotificationBus.ts` — notification bus definition
+- `apps/cli/src/api/session/sessionMessageTypes.ts` — `SessionEventMessage` type including `{ type: 'ready' }`
+- `apps/cli/src/backends/claude/claudeRemoteLauncher.readyPushPolicy.test.ts` — test confirming push + `sendSessionEvent` both fire on `onReady()`

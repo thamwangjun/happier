@@ -1,168 +1,231 @@
-# Pitfalls: Adding settings.json Tool Configuration to the Happier MCP Bridge
+# Domain Pitfalls: Suppressing Subagent ready Notifications in Happier CLI Claude Backend
 
-**Domain:** CLI tool settings file (JSON config for MCP tool filtering)
-**Researched:** 2026-04-18
-**Overall confidence:** HIGH — all findings grounded in direct codebase inspection
-
----
-
-## Pitfalls
-
-| Pitfall | Risk | Prevention | Phase |
-|---------|------|------------|-------|
-| Silent failure on schema validation errors | HIGH | Use `safeParse` + warn to log, never swallow | Schema design |
-| File-not-found treated as fatal error | HIGH | Treat missing file as "all tools enabled" (graceful default-open) | File reading |
-| Tool name typos go unnoticed at startup | HIGH | Validate every name in config against `HAPPIER_BUILT_IN_TOOL_NAMES` at read time; log unknown names as warnings | Schema design |
-| Breaking existing users who have no settings file | HIGH | Default must be all tools enabled; no settings file = no change in behavior | File reading |
-| Config read on every MCP request instead of once | MEDIUM | Read file once at MCP server startup, not inside the per-request `createHappierMcpServer` call | Integration point |
-| Precedence conflict between env var actions settings and file-based tool filter | MEDIUM | File controls which tools are registered; env `HAPPIER_ACTIONS_SETTINGS_V1` controls action enablement — document that these are orthogonal, not merged | Precedence design |
-| `settings.json` key name collides with upstream schema evolution | MEDIUM | Use a namespaced key (`mcpToolsV1`) under the existing `settings.json` structure, not a new top-level file; audit upstream `Settings` interface before adding | Upstream compatibility |
-| Config schema version not tracked | MEDIUM | Add a `v: 1` discriminant in the config blob from day one; enables safe future migrations | Schema design |
-| Corrupt / partially written file causes startup failure | MEDIUM | Wrap `JSON.parse` in try-catch; treat `SyntaxError` as "file corrupt, fall back to defaults" and log a user-visible warning | File reading |
-| Filter applied before dynamic tool catalog is resolved | MEDIUM | The tool catalog (`HAPPIER_BUILT_IN_TOOLS`) is built at import time from `listActionSpecs()`; filter must run after catalog is stable, i.e. inside `registerHappierMcpBuiltInTools` or its call site | Integration point |
-| Per-request `createHappierMcpServer` creates a new filter on each HTTP call | LOW | Settings should be read once and passed as a frozen config object through `startHappyServer` → `createHappierMcpServer` → `registerHappierMcpBuiltInTools` | Integration point |
-| File permissions allow world-read of tool preferences | LOW | `chmod 0600` on write, consistent with how `persistence.ts` handles `access.key` and `settings.json` | File reading |
-| Settings file path hardcoded to `~/.happier-dev/` instead of `configuration.happyHomeDir` | LOW | Use `configuration.happyHomeDir` (already respects `HAPPIER_HOME_DIR` env override); never hardcode `~/.happier-dev` | Integration point |
-| Upstream merge introduces a conflicting `mcpTools` field in `Settings` | LOW | Add the feature under a clearly fork-local namespace; track upstream `Settings` interface changes via `persistence.ts` diff on each upstream merge | Upstream compatibility |
+**Domain:** Happier CLI — `claudeRemoteAgentSdk.ts` / `finalizeCurrentTurn()` boolean discriminant
+**Researched:** 2026-04-19
+**Confidence:** HIGH (all claims grounded in direct code inspection)
 
 ---
 
-## Critical Pitfalls (detail)
+## Misclassification Risks
 
-### 1. Silent failure on schema validation errors
+### Pitfall 1: `isSubagent` passed as `false` for a real subagent turn
 
-**What goes wrong:** A user hand-edits `settings.json` and introduces a typo or wrong type. If the reader uses `JSON.parse` + a plain cast (no Zod validation), the invalid value silently becomes `undefined` mid-filter and all tools become enabled or disabled in unexpected ways.
+**What goes wrong:** `onReady()` fires on a subagent completion. The session unlocks and begins accepting the next user message before the parent agent has itself completed. The UI shows the session as "ready" mid-task — a phantom ready state.
 
-**Why it happens:** The codebase already has a pattern for this — `readMcpServersSettingsFromAccountSettings` uses `McpServersSettingsV1Schema.safeParse` and falls back to `emptySettings()`. The same discipline must be applied here. The `actionsSettings.ts` reader does the same for `HAPPIER_ACTIONS_SETTINGS_V1`.
+**Why it happens:**
+- The call sites of `finalizeCurrentTurn()` are spread across three distinct trigger points inside the `for await` loop (lines 1536, 1554, 1607):
+  1. `task_notification` with `status === 'stopped' | 'failed' | 'completed'`
+  2. `system.init` + `isCompactCommand`
+  3. `result` message (the standard turn-end path)
+- Adding `isSubagent` means every one of those call sites must independently receive the correct value. If one is missed, or if the value is computed once at the top of the function and cached while message context changes mid-stream, the wrong classification can silently propagate.
 
-**Evidence:** Both `readMcpServersSettingsFromAccountSettings.ts` and `actionsSettings.ts` use `safeParse` with explicit fallback to safe defaults. Deviating from this pattern breaks the established invariant.
+**Consequences:**
+- The session appears idle while Claude is still processing subagent work inside agent-teams mode.
+- `scheduleNextMessagePump()` runs: if a message is already queued in `opts.nextMessage()`, it gets injected into the underlying Claude subprocess at the wrong moment, corrupting the conversation state.
+- Transcript continuity breaks because `flushStreamedTranscriptWriter('turn-end')` is called early, closing out a transcript segment before subagent output has finished streaming.
 
-**Prevention:** Use Zod `safeParse`. On failure, log a user-visible warning to file (`logger.warn`) and fall back to enabling all tools. Never throw. Return a typed result so callers cannot ignore the parse outcome.
+**Prevention:** The `isSubagent` value must be derived from the message currently being processed (i.e., from `parent_tool_use_id` or from `task_id !== activeTaskId`), not from a captured closure at an outer scope. Compute it inside each call site, not outside the loop.
 
-**Detection:** Warning in `~/.happier-dev/logs/` mentioning "settings.json schema invalid".
-
----
-
-### 2. Tool name typos in config go unnoticed
-
-**What goes wrong:** A user writes `"change-title": false` (hyphen instead of underscore). The filter finds no match in `HAPPIER_BUILT_IN_TOOL_NAMES`, silently keeps the tool enabled, and the user wonders why their config has no effect.
-
-**Why it happens:** Filter-by-name approaches without explicit unknown-key detection are invisible errors.
-
-**Evidence:** `HAPPIER_BUILT_IN_TOOL_NAMES` is already exported from `catalog.ts` as a frozen array of canonical tool names. Validation against this list is a one-liner.
-
-**Prevention:** After parsing the config, iterate over every tool name in the config and check it against `HAPPIER_BUILT_IN_TOOL_NAMES`. Log an explicit warning for each name not found: `"settings.json: unknown tool name 'change-title' — did you mean 'change_title'?"`. This runs at startup only, not per request.
+**Detection:** After a multi-subagent task, the session shows "ready" before the final parent assistant message is emitted. The turn diagnostic log (`[claudeRemoteAgentSdk] Turn summary`) fires more than once per user prompt.
 
 ---
 
-### 3. Breaking users who have no settings file
+### Pitfall 2: `isSubagent` passed as `true` for the parent turn
 
-**What goes wrong:** New code path returns `[]` (empty allowed list) instead of `undefined` (no filter) when the file does not exist. Every existing user's MCP bridge suddenly exposes zero tools.
+**What goes wrong:** `onReady()` is suppressed for the turn the user is actually waiting on. The session hangs — it never returns to the "ready" state and the user cannot send a follow-up message.
 
-**Why it happens:** A filter that defaults to "deny all" is a safe-closed policy appropriate for security features. For a usability feature like tool visibility, the right default is "allow all" (no filter). The absence of a file must be explicitly handled as a distinct case from "file exists but specifies no tools".
+**Why it happens:**
+- If the heuristic for subagent detection is too broad (e.g., checking only whether `parent_tool_use_id` is non-null, when in fact the parent turn's `result` message can itself have a non-null `parent_tool_use_id` in certain agent-team topologies), the final parent `result` is misclassified.
+- Alternatively, if `activeTaskId` is not cleared correctly before the final `task_notification` for the parent fires, the comparison `taskId === activeTaskId` can still be true when processing the parent's own completion event.
 
-**Evidence:** The existing `readMcpServersSettingsFromAccountSettings` pattern returns `emptySettings()` (no servers configured) rather than crashing or returning null. The same principle applies: missing file = `null` config = no filter applied.
+**Consequences:**
+- Permanent hang: `scheduleNextMessagePump()` is never called, so `opts.nextMessage()` is never drained, so the session queue stalls. The underlying Claude subprocess may continue running or wait for input that never arrives.
+- If the caller has a timeout, this surfaces as a session timeout error rather than a subagent classification bug — hard to debug.
 
-**Prevention:** Reader function must return a discriminated union: `{ found: false }` vs `{ found: true; config: McpToolsConfigV1 }`. The caller applies the filter only when `found === true`.
+**Prevention:** The parent turn's `result` message should be the canonical, unconditional path to `onReady()`. Any subagent suppression must only apply to turn-end signals that arrive before the final `result`, specifically `task_notification` events that match a task launched by a subagent (i.e., `taskId !== activeTaskId` or `parent_tool_use_id !== null` on the originating `task_started` event).
 
----
-
-### 4. `settings.json` key collision with upstream schema evolution
-
-**What goes wrong:** This fork adds a new top-level key (e.g. `mcpTools`) to `~/.happier-dev/settings.json`. Upstream later adds a key with the same name but different semantics. On the next upstream merge, the settings migration code conflicts or silently reinterprets the fork-local data.
-
-**Why it happens:** The upstream `Settings` interface in `persistence.ts` is versioned (`SUPPORTED_SCHEMA_VERSION = 6`) with explicit migration steps. Adding to it in the fork creates a merge conflict zone.
-
-**Evidence:** `persistence.ts` contains a `migrateSettings` function with version-gated migrations from v2 through v6. Each migration deletes or renames keys. A fork-local addition that isn't aware of upstream migrations can be silently wiped.
-
-**Prevention options (pick one):**
-- Option A (preferred for v1.0): Use a separate file, `~/.happier-dev/happier-settings.json`, outside the upstream `Settings` object entirely. No migration logic needed. Zero merge conflict risk.
-- Option B: Add the key under a namespaced umbrella (e.g. `forkLocalV1`) in `Settings` and add a guard in the migration runner that preserves it across versions.
-
-Option A is lower risk for v1.0. The milestone scope says "hand-edit only" and "user-global settings first", which does not require tight integration with the existing `Settings` migration chain.
+**Detection:** After sending a user prompt, the session never emits an `onReady()` callback. In tests, `onReady` mock has zero calls after a full message sequence completes.
 
 ---
 
-## Moderate Pitfalls (detail)
+### Pitfall 3: `task_notification` heuristic misidentifying parent turn as subagent
 
-### 5. Precedence conflict: env var vs file config
+**What goes wrong:** The existing `task_notification` branch at line 1529 already gates on `taskId === activeTaskId`, meaning it only finalizes the turn when the notification matches the task Claude Code registered for this turn. A subagent's `task_notification` arrives with a different `taskId` and is currently ignored. This is already correct behavior — but the proposed change may introduce a new condition on top of this that contradicts it.
 
-**What goes wrong:** A developer sets `HAPPIER_ACTIONS_SETTINGS_V1` to disable an action. The file-based config enables the corresponding tool. They conflict. The behavior is undefined.
+**Specifically:** If `isSubagent` is computed based on `parent_tool_use_id` from the `task_notification` system message, this field is not guaranteed to be present on system messages in all agent-teams topologies. The `parent_tool_use_id` field is a property of streamed `assistant`/`user` content messages (the sidechain routing key), not of `system` control messages.
 
-**Clarification of the actual layering:** The env-based `actionsSettings` system controls whether an *action* is enabled for a surface (this drives `isActionEnabledByEnv`). The proposed file-based config controls whether an MCP tool *name* is registered at all. These are orthogonal:
+**Consequences:** A `task_notification` for the parent task (where `taskId === activeTaskId`) gets incorrectly treated as a subagent notification, suppressing `onReady()` on the turn the user is waiting on. Identical outcome to Pitfall 2.
 
-- Env setting: "is this action allowed to execute?"
-- File setting: "is this tool name exposed in the MCP tool list?"
+**Prevention:** Do not use `parent_tool_use_id` on `system` messages to detect subagents. The correct indicator on a `task_notification` is whether `taskId !== activeTaskId` (not matching the parent task). The Codex backend's approach — comparing `notificationThreadId !== activeTurn.threadId` at line 943 in `runtime.ts` — is the right analogy: use the registered identifier for the current turn, not a field that may be absent on control messages.
 
-A tool can be listed but its underlying action disabled by env. A tool can be hidden from the MCP list even if its action is env-enabled.
-
-**Prevention:** Document this precedence explicitly in the settings file schema comment and in the code. Do not merge or "override" the two systems. The file filter runs at registration time (`registerHappierMcpBuiltInTools`); the env action check runs at dispatch time (`dispatchBuiltInHappierTool`). Keep them at their natural call sites.
+**Detection:** In an end-to-end agent-teams test, a parent task completion fails to trigger `onReady()` even though no subagent was involved.
 
 ---
 
-### 6. Config read on every MCP request
+## Bookkeeping Edge Cases
 
-**What goes wrong:** `startHappyServer.ts` creates a fresh `createHappierMcpServer` on every HTTP request (this is by design for stateless transports). If file reading is done inside `createHappierMcpServer`, the settings file is stat'd and parsed on every incoming MCP call, adding I/O latency and making the daemon sensitive to file system errors mid-session.
+### Edge Case 1: `didFinalizeTurn` guard blocks parent finalization if set by subagent
 
-**Evidence:** `startHappyServer.ts` line 57: `const { mcp } = createHappierMcpServer(client, ...)` is inside the `createServer` handler. The comment at line 51 explains this is intentional for stateless transport reasons.
+**What goes wrong:** `finalizeCurrentTurn()` begins with `if (didFinalizeTurn) return;` which prevents double-firing. However, if the implementation sets `didFinalizeTurn = true` at the top before the `isSubagent` branch, a subagent finalization permanently locks out the parent turn's finalization.
 
-**Prevention:** Read the settings file once in `startHappyServer` before the HTTP server is created. Pass the resolved tool filter (a frozen set of enabled tool names, or `null` for "no filter") as a parameter through `startHappierMcpServer` → `createHappierMcpServer` → `registerHappierMcpBuiltInTools`. The filter is immutable for the lifetime of the MCP server instance.
+**Root cause of the trap:** The natural refactor looks correct but is subtly wrong:
+```typescript
+const finalizeCurrentTurn = async (params?: { isSubagent?: boolean }) => {
+    if (didFinalizeTurn) return;
+    didFinalizeTurn = true; // set here, before isSubagent check
+    // ...
+    if (!params?.isSubagent) {
+        await opts.onReady();
+        scheduleNextMessagePump();
+    }
+};
+```
+When a subagent notification calls this, `didFinalizeTurn` becomes `true`. The parent `result` message then calls `finalizeCurrentTurn()`, hits `if (didFinalizeTurn) return`, and exits without calling `onReady()`. Session hangs permanently.
 
----
-
-### 7. `configuration.happyHomeDir` ignored
-
-**What goes wrong:** New code hardcodes `path.join(os.homedir(), '.happier-dev', 'happier-settings.json')`. A user who has set `HAPPIER_HOME_DIR=/opt/happier` to isolate their config gets the file read from the wrong location.
-
-**Evidence:** `configuration.ts` line 230-235 shows `HAPPIER_HOME_DIR` overrides the default home directory. `configuration.happyHomeDir` is the canonical source of truth.
-
-**Prevention:** Always derive the settings file path from `configuration.happyHomeDir`. Never import `os.homedir()` in new settings-reading code.
-
----
-
-## Minor Pitfalls
-
-### 8. Schema version not tracked from day one
-
-**What goes wrong:** v1 ships with no version discriminant in the settings blob. When v2 needs to change the shape (e.g. add per-surface tool overrides), there is no way to distinguish an old file from a new one without heuristic detection.
-
-**Prevention:** Include `"v": 1` in the Zod schema from the start. This is zero cost now and eliminates an entire class of future migration bugs.
+**Prevention:** Track `didEmitReady` separately from `didFinalizeTurn`. Use `didFinalizeTurn` to gate bookkeeping (thinking state, transcript flush, diagnostics) that must run exactly once. Use `didEmitReady` to gate `onReady()` and `scheduleNextMessagePump()` independently. A subagent finalization sets `didFinalizeTurn` but not `didEmitReady`, allowing the parent to complete Phase A bookkeeping only if needed, and always run Phase B.
 
 ---
 
-### 9. Filter applied to dynamic action-backed tools incorrectly
+### Edge Case 2: `scheduleNextMessagePump()` must not run for subagent completions
 
-**What goes wrong:** `catalog.ts` builds `HAPPIER_BUILT_IN_TOOLS` by combining `MANUAL_TOOLS` with `buildActionBackedTools()` (which calls `listActionSpecs()` at import time). A naive filter that only checks against `MANUAL_TOOLS` names would silently pass all action-backed tool names through.
+**What goes wrong:** The last line of `finalizeCurrentTurn()` (line 1181) is `scheduleNextMessagePump()`. This starts a concurrent async task that calls `opts.nextMessage()`, dequeues the next user prompt, and injects it into the underlying Claude subprocess. For a subagent completion, this must not happen — the parent agent is still running.
 
-**Prevention:** The filter must operate on the final merged `HAPPIER_BUILT_IN_TOOLS` array (post-dedup), not on either subset. Use `HAPPIER_BUILT_IN_TOOL_NAMES` as the validation source.
+**Consequence:** A queued user message from the Happier server gets injected mid-task, corrupting the transcript. Claude responds to the user before finishing agent work. The `result` message routing is confused because the turn counter has advanced.
+
+**Prevention:** Both `onReady()` and `scheduleNextMessagePump()` must be inside the same `if (!isSubagent)` guard. They are causally linked — do not gate one without the other.
 
 ---
 
-## Phase-Specific Warnings
+### Edge Case 3: `flushStreamedTranscriptWriter` must still run for subagent turns
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|----------------|------------|
-| Schema design | No version discriminant → future migration pain | Add `v: 1` to Zod schema from the start |
-| File reader implementation | Missing file treated as error | Return `{ found: false }` discriminant; caller enables all tools |
-| File reader implementation | Corrupt file causes startup crash | Wrap in try-catch; log warning; fall back to all-enabled |
-| Validation | Unknown tool names silently ignored | Check all configured names against `HAPPIER_BUILT_IN_TOOL_NAMES`; warn on mismatch |
-| Integration into `registerHappierMcpBuiltInTools` | Filter runs per-request instead of per-startup | Read file in `startHappyServer`, pass as frozen param |
-| Precedence documentation | Devs assume file overrides env settings | Document orthogonality of file filter vs `HAPPIER_ACTIONS_SETTINGS_V1` |
-| Upstream merge | Fork key collides with upstream `Settings` migration | Use separate `happier-settings.json` file or a clearly namespaced key |
-| File path resolution | Hardcoded `~/.happier-dev` ignores `HAPPIER_HOME_DIR` | Use `configuration.happyHomeDir` exclusively |
+**What goes wrong:** The `streamedTranscriptWriter` flush (lines 1167-1170) closes out a streamed transcript segment. For subagent completions, this flush still needs to happen to commit sidechain transcript data before the next sidechain segment begins. If the flush is accidentally placed inside `if (!isSubagent)`, sidechain transcript data is lost or arrives out of order.
+
+**Prevention:** Transcript flush, `updateThinking(false)`, turn diagnostics reset, and `completionEvent` emission are bookkeeping that must run for all completions (parent and subagent). Only `onReady()` and `scheduleNextMessagePump()` should be gated on `!isSubagent`.
+
+---
+
+### Edge Case 4: `activeTaskId = null` cleared prematurely by subagent finalization
+
+**What goes wrong:** At line 1162, `activeTaskId = null` is reset unconditionally inside `finalizeCurrentTurn`. If `finalizeCurrentTurn(isSubagent=true)` is called, `activeTaskId` is cleared. The parent task's subsequent `task_notification` (with the parent's `taskId`) will not match the equality check `taskId === activeTaskId` (which is now null), so the parent turn finalization via `task_notification` will silently not fire.
+
+**Current safeguard:** The existing code at line 1532 (`if (typeof taskId === 'string' && taskId === activeTaskId)`) means `finalizeCurrentTurn` is only called from `task_notification` when `taskId === activeTaskId`. A subagent's `task_notification` has a different `taskId` and does not call `finalizeCurrentTurn` at all under the current code. The hazard only materializes if the new implementation calls `finalizeCurrentTurn(isSubagent=true)` from inside the `task_notification` handler even when `taskId !== activeTaskId`, which would be the wrong design anyway.
+
+**Prevention:** Only call `finalizeCurrentTurn(isSubagent=true)` when the notification genuinely belongs to a subagent task. The `task_notification` branch at line 1529 should remain the single location that calls `finalizeCurrentTurn`, with `isSubagent` derived from whether `taskId !== activeTaskId`. Do not add a separate call path for subagent notifications that bypasses the existing equality guard.
+
+---
+
+### Edge Case 5: `awaitingNextTurnStart` / `didFinalizeTurn` state machine interaction
+
+**What goes wrong:** These two flags gate the "clear finalize guard for next turn" logic at lines 1249-1253 and 1507-1513. After a parent finalization, `awaitingNextTurnStart = true` and `didFinalizeTurn = true`. The next turn's first `stream_event` or `assistant` message clears both flags. If a subagent finalization incorrectly sets `awaitingNextTurnStart = true`, the next subagent stream event will prematurely clear the guard, causing the main loop to incorrectly believe a new user-initiated turn has started.
+
+**Prevention:** `awaitingNextTurnStart` must also be gated behind `if (!isSubagent)` inside `finalizeCurrentTurn`. It is part of Phase B (notification), not Phase A (bookkeeping).
+
+---
+
+## Test Strategy
+
+### Test 1: Subagent `task_notification` does not fire `onReady()`
+
+Yield a sequence via the `createQuery` test seam:
+1. `system` with `subtype: 'task_started'`, `task_id: 'subtask-1'` (note: `activeTaskId` is null or a different parent task id)
+2. `system` with `subtype: 'task_notification'`, `task_id: 'subtask-1'`, `status: 'completed'`
+3. `result` message
+
+Assert `onReady` mock is called exactly once (triggered by `result`, not by `task_notification`).
+
+This is the primary regression guard for Pitfall 1.
+
+---
+
+### Test 2: Parent `task_notification` still fires `onReady()` exactly once
+
+Yield:
+1. `system` with `subtype: 'task_started'`, `task_id: 'parent-task'`
+2. `system` with `subtype: 'task_notification'`, `task_id: 'parent-task'`, `status: 'completed'`
+
+Assert `onReady` mock is called exactly once. Verifies Pitfall 2 is not introduced.
+
+---
+
+### Test 3: `result` message always fires `onReady()` regardless of subagent state
+
+Yield only a `result` message (no preceding `task_notification`).
+
+Assert `onReady` is called exactly once. This is the baseline non-regression test.
+
+---
+
+### Test 4: Two subagent `task_notification` events followed by `result` produce exactly one `onReady()`
+
+Yield:
+1. `task_notification` for subtask-1 (subagent)
+2. `task_notification` for subtask-2 (subagent)
+3. `result` message
+
+Assert `onReady` called exactly once. Catches the `didFinalizeTurn` lockout from Edge Case 1.
+
+---
+
+### Test 5: `scheduleNextMessagePump` is not invoked on subagent finalization
+
+Provide a `nextMessage` mock that records invocation count and timing. Assert the mock is not called until after the `result` message triggers `onReady`. Catches Edge Case 2.
+
+---
+
+### Test 6: `streamedTranscriptWriter.flushAll` is called for subagent `task_notification`
+
+Provide a `streamedTranscriptWriter` mock. Yield a subagent `task_notification`, then `result`.
+
+Assert `flushAll` is called at least twice (once for the subagent, once for the parent). Assert `onReady` is called exactly once (from the `result`). Catches Edge Case 3.
+
+---
+
+### Test 7: End-to-end agent-teams sequence completes cleanly
+
+Yield:
+1. `task_started` for subagent-1
+2. `task_notification` completed subagent-1
+3. `task_started` for subagent-2
+4. `task_notification` completed subagent-2
+5. `result` message
+
+Assert:
+- `onReady` called exactly once
+- `nextMessage` consumed only once (after `result`)
+- All transcript flushes occurred
+
+Integration-style regression guard for the full happy path.
+
+---
+
+### Test 8: Existing tests continue to pass without modification
+
+The existing test files (`claudeRemoteAgentSdk.streamEvents.test.ts`, `claudeRemoteAgentSdk.checkpoints.test.ts`, etc.) must pass without changes. None of those tests involve `task_notification` sequences, so they exercise the `result`-only path (Test 3 baseline). Any regression here indicates a structural change to `finalizeCurrentTurn` broke the common case.
+
+---
+
+## Prevention Steps
+
+1. **Compute `isSubagent` from the current message, not from a closure.** For the `task_notification` path, the correct indicator is `taskId !== activeTaskId`. For the `result` path, the result message is never a subagent signal — it is always the parent turn completing. Do not add `isSubagent` to the `result` handler.
+
+2. **Separate bookkeeping (Phase A) from notification (Phase B).** Phase A runs unconditionally: thinking reset, transcript flush, diagnostics, `completionEvent`. Phase B runs only for parent completions: `onReady()`, `scheduleNextMessagePump()`, `awaitingNextTurnStart = true`. Introduce `didEmitReady` to guard Phase B independently of `didFinalizeTurn`.
+
+3. **Do not use `parent_tool_use_id` on system messages as the subagent indicator.** That field is not defined on `system` control messages. Use `taskId !== activeTaskId` instead.
+
+4. **Audit all three call sites before merging.** The `result` path (line 1607) should never pass `isSubagent=true`. The `task_notification` path (line 1536) should pass `isSubagent = (taskId !== activeTaskId)`. The compact `init` path (line 1554) is a special case that should remain unchanged.
+
+5. **Model the Codex reference.** The Codex `runtime.ts` pattern at lines 939-964 (`notificationMatchesPendingTurn` returning false for child `threadId`) is the architecturally correct analogy. It routes child-thread notifications to `finalizeSyntheticSubagentThread` and only routes parent-thread notifications to `finishPendingTurn`. Apply the same separation in the Claude backend: subagent `task_notification` goes to a dedicated handler, parent `task_notification` goes to `finalizeCurrentTurn`.
+
+6. **Write Tests 1-3 before implementing.** They define the contract and will catch the most common misclassification mistakes during development.
 
 ---
 
 ## Sources
 
-All findings are grounded in direct codebase inspection (HIGH confidence):
+All findings are based on direct inspection of:
+- `/apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.ts` — lines 768, 1158-1181, 1519-1556, 1583-1608 (HIGH confidence)
+- `/apps/cli/src/backends/codex/appServer/runtime.ts` — lines 824-912, 939-964, 1033-1057 (HIGH confidence, reference pattern)
+- `/apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.streamEvents.test.ts` — test harness patterns (HIGH confidence)
+- `/apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.testkit.ts` — `makeMode` helper (HIGH confidence)
 
-- `apps/cli/src/persistence.ts` — existing `Settings` schema, `migrateSettings`, `SUPPORTED_SCHEMA_VERSION = 6`, and file-reading patterns
-- `apps/cli/src/configuration.ts` — `happyHomeDir`, `HAPPIER_HOME_DIR` env override, `settingsFile` derivation
-- `apps/cli/src/mcp/servers/readMcpServersSettingsFromAccountSettings.ts` — established `safeParse` + fallback pattern
-- `apps/cli/src/settings/actionsSettings.ts` — env-based settings precedence, `safeParse` + silent-fallback pattern
-- `apps/cli/src/mcp/startHappyServer.ts` — per-request `createHappierMcpServer` construction (integration point)
-- `apps/cli/src/mcp/server/registerHappierMcpBuiltInTools.ts` — where tool registration happens (correct insertion point for filter)
-- `apps/cli/src/agent/tools/happierTools/catalog.ts` — `HAPPIER_BUILT_IN_TOOLS`, `HAPPIER_BUILT_IN_TOOL_NAMES`, dynamic action-backed tool construction
-- `apps/cli/src/agent/tools/happierTools/listBuiltInHappierTools.ts` — surface-based tool filtering using `isActionEnabledByEnv`
-- `apps/cli/src/agent/tools/happierTools/actionToolCatalog.ts` — `filterBuiltInToolsForSurface`, surface-checking logic
+No external sources required. All findings are internal code analysis.

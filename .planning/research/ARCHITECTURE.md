@@ -1,180 +1,176 @@
-# Architecture Analysis: MCP Tool Configuration via ~/.happier-dev/settings.json
+# Architecture: onReady → readyHandler Call Graph
 
-**Project:** Happier — MCP Tool Configuration (v1.0)
-**Researched:** 2026-04-18
-**Confidence:** HIGH — all claims are derived from direct source reading
+**Project:** Happier CLI — Claude Remote Backend
+**Researched:** 2026-04-19
+**Confidence:** HIGH — all findings sourced directly from codebase, no inference
 
 ---
 
-## Architecture Analysis
-
-### Integration Point
-
-**Where settings.json lives:** `configuration.happyHomeDir` resolves to `~/.happier` (or `$HAPPIER_HOME_DIR`) by default, but the milestone context references `~/.happier-dev/settings.json`. The existing `configuration.settingsFile` already points to `join(this.happyHomeDir, 'settings.json')` (configuration.ts line 239). The `happyHomeDir` defaults to `join(homedir(), '.happier')`. If the product branding uses `.happier-dev`, the `HAPPIER_HOME_DIR` env var must be set to `~/.happier-dev`; otherwise the canonical path under the existing system is `~/.happier/settings.json`. **Verify with the team which path is canonical for the v1.0 target.** The rest of this analysis treats `configuration.settingsFile` (i.e. `configuration.happyHomeDir/settings.json`) as the source of truth.
-
-**Where MCP tool filtering currently happens:**
-
-The active filter call chain, traced from source, is:
+## Call Graph
 
 ```
-startHappyServer (per HTTP request)
-  └─ createHappierMcpServer
-       ├─ isActionEnabledByEnv(id, { surface: 'session_agent' })   [resources]
-       ├─ createActionToolExecutorBridge({ isActionEnabled: ... })  [action tools]
-       └─ registerHappierMcpBuiltInTools
-            └─ listBuiltInHappierTools({ surface: 'session_agent' })
-                 └─ filterBuiltInToolsForSurface(
-                      HAPPIER_BUILT_IN_TOOLS,
-                      { isActionEnabled: (id) => isActionEnabledByEnv(id, { surface }) }
-                    )
-```
+claudeRemoteAgentSdk.ts: finalizeCurrentTurn()
+  │
+  ├─ [1] if (didFinalizeTurn) return   ← idempotency guard
+  ├─ [2] didFinalizeTurn = true
+  ├─ [3] awaitingNextTurnStart = true
+  ├─ [4] activeTaskId = null
+  ├─ [5] updateThinking(false)
+  ├─ [6] flushStreamedTranscriptWriter('turn-end' | 'abort', ...)
+  ├─ [7] logger.debug('[claudeRemoteAgentSdk] Turn summary', ...)
+  ├─ [8] resetTurnDiagnostics()
+  ├─ [9] opts.onCompletionEvent?.(params.completionEvent)  [conditional]
+  ├─ [10] await opts.onReady()                             ← GATING TARGET
+  └─ [11] scheduleNextMessagePump()
 
-`isActionEnabledByEnv` (actionsSettings.ts) reads `process.env.HAPPIER_ACTIONS_SETTINGS_V1` on every call, parses it as JSON, validates against `ActionsSettingsV1Schema`, and calls `isActionEnabledByActionsSettings`. There is no caching.
-
-The filter is applied at **registration time** inside `createHappierMcpServer`, which is called **once per HTTP request** (stateless mode, `startHappyServer` line 57). This means any change to the env var becomes visible on the next MCP request without daemon restart.
-
-**What `ActionsSettingsV1Schema` accepts:**
-
-```json
-{
-  "v": 1,
-  "actions": {
-    "<actionId>": {
-      "enabled": false,
-      "disabledSurfaces": ["session_agent"],
-      "disabledPlacements": [],
-      "enabledPlacements": [],
-      "approvalRequiredSurfaces": []
-    }
+opts.onReady is the lambda at claudeRemoteLauncher.ts lines 992–995:
+  async () => {
+      await messageQueue.flush();   ← [A] drain outgoing queue first
+      readyHandler();               ← [B] then signal ready
   }
-}
+
+readyHandler = createClaudeRemoteReadyHandler(...)  (line 847, claudeRemoteLauncher.ts)
+  │
+  ├─ Guard 1: if (params.getPending()) return  — no-op if a pending batch exists
+  ├─ Guard 2: if (params.getQueueSize() !== 0) return  — no-op if session queue non-empty
+  │
+  ├─ Branch A (no pushSender):
+  │   └─ session.sendSessionEvent({ type: 'ready' })
+  │
+  └─ Branch B (has pushSender):
+      └─ sendReadyWithPushNotification(...)
+          ├─ session.sendSessionEvent({ type: 'ready' })  ← always called first
+          └─ [fire-and-forget] dispatchActivityNotificationAsync(...)
+              └─ push notifications to mobile/webhook (best-effort, catch swallowed)
 ```
 
-This schema already handles per-surface and per-placement disabling. The file format for `~/.happier-dev/settings.json` only needs to carry an `actionsSettings` key (or equivalent) that maps to this shape.
+### Trigger sites for finalizeCurrentTurn() inside claudeRemoteAgentSdk.ts
+
+| Site | Condition | Notes |
+|------|-----------|-------|
+| `message.type === 'result'` (line 1607) | Every normal turn end | Primary path |
+| `message.type === 'result'` + `isCompactCommand` (line 1603) | /compact turn end | Sets completionEvent |
+| `system.subtype === 'task_notification'` + status in `{stopped,failed,completed}` (line 1536) | Agent-teams task lifecycle | Subagent sub-turn end |
+| `system.subtype === 'init'` + `isCompactCommand` (line 1554) | Compaction init boundary | Session ID reset path |
+
+There is no existing `isSubagent` gate anywhere in `claudeRemoteAgentSdk.ts`.
 
 ---
 
-### Proposed Data Flow
+## Side Effects
 
-**Recommended approach: read at daemon startup, pass as env var to child session processes.**
+### [A] messageQueue.flush() — inside onReady lambda
 
-This recommendation is based on three evidence-backed reasons:
+- **File:** `apps/cli/src/backends/claude/utils/OutgoingMessageQueue.ts`
+- **Effect:** Drains the outgoing queue of converted SDK messages to `session.client.sendClaudeSessionMessage`. This ensures all buffered tool-call messages are delivered to the server before the ready signal is sent.
+- **Subagent relevance:** Subagent (sidechain) messages flow through `onMessage` → `messageQueue.enqueue` the same way as mainline messages. The flush must happen before any ready signal to prevent out-of-order delivery. This is independent of whether the ready event itself is sent.
 
-1. **The env-var read path (`isActionEnabledByEnv`) is called per MCP request, not per daemon start.** The MCP server process (`startHappyServer`) is a session-local HTTP server spawned per session runner, not by the daemon itself. The daemon spawns session runner child processes using `spawnHappyCLI` with an explicit `env` built by `buildSpawnChildProcessEnv` (which merges `process.env` with `extraEnv`). `HAPPIER_ACTIONS_SETTINGS_V1` flows to the session runner because it is already in the daemon's `process.env` — the child inherits the whole env.
+### [B] session.sendSessionEvent({ type: 'ready' }) — core side effect
 
-2. **Fresh-per-request file reads would be operationally fragile.** The MCP server is stateless and creates a new `McpServer` per HTTP request. A synchronous file read per request (or async blocking) inside the hot path would add latency and failure modes (missing file, malformed JSON) at the worst possible moment. The existing env-var pattern already handles the parse-fail-gracefully case by returning an empty settings object on any error.
+- **Effect:** Sends a WebSocket event to the relay server signaling the session is idle and waiting for input. The server uses this to update session state and unblock client delivery.
+- **Local state mutations:** None. readyHandler only reads state (`getPending()`, `getQueueSize()`), it does not write local state.
+- **Subagent relevance:** Sending ready for a subagent task_notification turn would incorrectly tell the mobile client "Claude is idle" mid-execution, causing premature UI transitions and potentially injecting a spurious user prompt.
 
-3. **Reading at daemon startup aligns with how all other configuration is handled.** `configuration.ts` reads `settings.json` synchronously at module load time (see `readActiveServerFromSettingsFile`). The pattern is established: settings are stable for the lifetime of a daemon run.
+### [B] dispatchActivityNotificationAsync — fire-and-forget push
 
-**Concretely, the data flow becomes:**
+- **Effect:** Sends push notifications to registered devices (Expo push, webhooks). All errors are swallowed via `.catch()`.
+- **Subagent relevance:** Suppressing for subagent turns is correct — a sub-task completing is not a "waiting for your command" moment. This is a desirable side-benefit of gating.
 
-```
-~/.happier-dev/settings.json
-        |
-        | read once at daemon start
-        v
-readLocalMcpSettingsFromFile(configuration.settingsFile)
-        |
-        | returns ActionsSettingsV1 | null
-        v
-serialize to JSON string
-        |
-        | injected into daemon's process.env as HAPPIER_ACTIONS_SETTINGS_V1
-        v (daemon process.env inherited by all child spawns via buildSpawnChildProcessEnv)
-session runner child process
-        |
-        | isActionEnabledByEnv reads process.env.HAPPIER_ACTIONS_SETTINGS_V1
-        v
-MCP server (per request) — existing filter logic unchanged
-```
+### [11] scheduleNextMessagePump() — after onReady(), not inside it
 
-Note: the daemon process itself does not run an MCP server. MCP servers are created inside session runner processes via `startHappyServer`. The env var propagation through `buildSpawnChildProcessEnv` (which does `{ ...processEnv, ...extraEnv }`) is the correct injection point.
+- **Effect:** Starts an async loop that calls `opts.nextMessage()` and pushes the next user turn into the `PushableAsyncIterable`, unblocking the Claude Agent SDK for the next prompt.
+- **Critical:** `scheduleNextMessagePump()` is on line 1180, unconditionally after `await opts.onReady()` on line 1179. It is sequential but independent. The pump does not depend on whether onReady sent a ready event or was a no-op.
+- **Subagent relevance:** The multi-turn SDK loop continues regardless of whether onReady fires. Gating onReady does not block the next message pump.
 
-**Alternative considered and rejected: read fresh per MCP request from file.**
+### [2–4] Turn bookkeeping in finalizeCurrentTurn — before onReady()
 
-This would require passing a file path or a reader function into `createHappierMcpServer` → `listBuiltInHappierTools` → `filterBuiltInToolsForSurface`. It would change the synchronous predicate `isActionEnabled: (id) => boolean` into an async one, which would require cascading async changes through `registerHappierMcpBuiltInTools`, `filterBuiltInToolsForSurface`, and `isActionAvailableOnToolSurface`. That is significant churn for a benefit (live reload without daemon restart) that is out of scope for v1.0.
+These mutations happen before `opts.onReady()` is called and are unaffected by any gating:
+- `didFinalizeTurn = true` — prevents double-finalization in the same turn
+- `awaitingNextTurnStart = true` — gates the finalize guard reset until the next stream_event
+- `activeTaskId = null` — required before the next task can be tracked
 
 ---
 
-### New vs Modified Components
+## Session Loop Safety
 
-**New: `readLocalMcpSettingsFromFile`** (suggested path: `apps/cli/src/settings/localMcpSettings.ts`)
+**Question:** Is there any state machine or loop that requires a ready signal after every turn (parent or subagent)?
 
-Responsibility: Read `~/.happier-dev/settings.json` (or `configuration.settingsFile`), extract the tool-filter sub-key, validate it against `ActionsSettingsV1Schema`, and return a serialized JSON string suitable for `HAPPIER_ACTIONS_SETTINGS_V1`, or `null` if absent or invalid.
+**Answer: No. The ready signal is only needed at the end of top-level turns, not after subagent task legs.**
 
-The file format decision: Two options exist.
+Evidence:
 
-**Option A — Standalone `~/.happier-dev/settings.json` with a top-level `mcpTools` key:**
-```json
-{
-  "mcpTools": {
-    "v": 1,
-    "actions": {
-      "session.title.set": { "enabled": false }
-    }
-  }
-}
-```
-This keeps tool config separate from the existing internal `Settings` interface and avoids schema version conflicts.
+1. **scheduleNextMessagePump() does not depend on onReady().** The pump fires unconditionally on line 1180, after the awaited onReady on line 1179. A no-op onReady still resolves and lets the pump start.
 
-**Option B — Extend the existing `Settings` interface with an `actionsSettings` field.**
-This would reuse the already-versioned Settings migration path but risks coupling user-facing configuration to internal schema versioning.
+2. **The `result` message path and the `task_notification` path are distinct.** When `task_notification` with `status === 'completed'` fires, this is a sub-task inside an agent-teams orchestration finishing. The top-level turn end still arrives via `message.type === 'result'`. The `didFinalizeTurn` guard prevents the result path from double-firing if task_notification already finalized.
 
-**Recommendation: Option A.** The existing `Settings` object is an internal CLI persistence format with a migration system and schema version. A user-facing hand-edit file should have its own top-level key with its own validation, not be subject to CLI-internal migrations. The `readLocalMcpSettingsFromFile` function reads `configuration.settingsFile`, checks for the `mcpTools` key (or whatever key the team decides), validates it with `ActionsSettingsV1Schema.safeParse`, and returns the serialized JSON or `null`.
+3. **The `awaitingNextTurnStart` mechanism bridges turns correctly.** After finalization:
+   - `awaitingNextTurnStart = true`, `didFinalizeTurn = true`
+   - The loop watches for the next assistant or user stream_event (`clearFinalizeGuardForNextTurnStart()` at line 1249–1252)
+   - On seeing one: `awaitingNextTurnStart = false; didFinalizeTurn = false` — the next turn can finalize normally
 
-**Modified: `startDaemon.ts`** — after credentials are resolved and before the daemon enters its main loop, call `readLocalMcpSettingsFromFile` and inject the result into `process.env[ENV_KEY]` if not already set. This mirrors how `applyAccountSettingsToProcessEnv.ts` injects account settings into the process env.
+   This mechanism operates on `stream_event` messages, which are independent of whether readyHandler was called.
 
-The correct injection point is after `configuration` is ready (it already is at daemon startup) and before the first session spawn. The cleanest spot is immediately after `auth` is resolved (line ~226 in startDaemon.ts), before `spawnSession` is ever called.
+4. **The idempotency guard makes gating safe.** `finalizeCurrentTurn()` early-returns on `didFinalizeTurn === true`. If a subagent task_notification calls it first, the subsequent `result` message call is a no-op. The ready event would only fire once — from whichever site first ran the non-gated finalizeCurrentTurn.
 
-**No changes required to:**
-- `actionsSettings.ts` — `isActionEnabledByEnv` already reads from env and handles missing/invalid JSON gracefully
-- `listBuiltInHappierTools.ts` — predicate-based, no path changes needed
-- `registerHappierMcpBuiltInTools.ts` — no changes
-- `createHappierMcpServer.ts` — no changes
-- `startHappyServer.ts` — no changes
-- `ActionsSettingsV1Schema` in protocol — already supports the target shape
-- `buildSpawnChildProcessEnv.ts` — child processes inherit `process.env` which will contain the key
+5. **Push guards in readyHandler provide defense-in-depth.** Even if ready fires unexpectedly, the `getPending()` and `getQueueSize()` guards prevent it from firing while there is a queued user message. This would not help for subagent turns (the queue may be empty mid-session), so gating at the call site in finalizeCurrentTurn is the correct layer.
+
+**Conclusion:** Gating `opts.onReady()` behind `if (!isSubagent)` in `finalizeCurrentTurn()` is safe from a session loop perspective. The pump, turn bookkeeping, and idempotency guard all operate independently of whether the ready event is sent.
 
 ---
 
-### Suggested Build Order
+## Integration Points
 
-**Step 1: Schema + reader function** (`apps/cli/src/settings/localMcpSettings.ts`)
+### Integration 1: messageQueue.flush() must run regardless of isSubagent
 
-Implement `readLocalMcpSettingsFromFile(filePath: string): string | null`. This function is pure and synchronously reads the file, parses the `mcpTools` key, validates against `ActionsSettingsV1Schema`, and returns `JSON.stringify(result)` or `null`. Write unit tests with Vitest covering: file absent, file malformed JSON, `mcpTools` key absent, `mcpTools` key present and valid, and `mcpTools` key present but schema-invalid.
+The `onReady` lambda wraps both the flush and the ready event:
 
-**Step 2: Daemon startup injection** (`apps/cli/src/daemon/startDaemon.ts`)
-
-After `configuration` is available and before the first `spawnSession`, add:
 ```typescript
-const serializedMcpSettings = readLocalMcpSettingsFromFile(configuration.settingsFile);
-if (serializedMcpSettings !== null && !process.env[ENV_KEY]) {
-  process.env[ENV_KEY] = serializedMcpSettings;
-}
+// claudeRemoteLauncher.ts lines 992–995
+onReady: async () => {
+    await messageQueue.flush();   // must always run
+    readyHandler();               // conditionally run
+},
 ```
-The guard `!process.env[ENV_KEY]` ensures an explicitly set env var (e.g. in tests or via shell) is not overridden by the file.
 
-**Step 3: Document the settings.json format**
+The flush is not inside `readyHandler`. If gating on `isSubagent`, the correct pattern is:
 
-Add a `~/.happier-dev/settings.json.example` or equivalent inline doc comment showing the hand-edit format. Keep it minimal: only the `mcpTools` key, with a single example of disabling one action.
+```typescript
+onReady: async () => {
+    await messageQueue.flush();              // always flush — prevents out-of-order messages
+    if (!isSubagent) readyHandler();         // only signal ready for top-level turns
+},
+```
 
-**Step 4: Integration smoke test**
+Skipping the flush for subagent turns would risk messages arriving at the server after the eventual top-level ready signal, breaking message ordering.
 
-Verify that a session runner child process correctly sees the `HAPPIER_ACTIONS_SETTINGS_V1` env var populated from the file. This is best tested by checking `process.env[ENV_KEY]` in the session runner after daemon spawn, or by observing the MCP tool list via the MCP inspector.
+### Integration 2: sendSessionEvent({ type: 'ready' }) — one per top-level turn
+
+This is the only mechanism by which the server transitions the session to idle. It must fire exactly once per completed top-level turn. Subagent task_notification turns must not trigger it.
+
+### Integration 3: scheduleNextMessagePump() — independent of onReady()
+
+Line 1180 calls `scheduleNextMessagePump()` unconditionally after the await. The multi-turn SDK loop does not stall if `onReady()` is a no-op.
+
+### Integration 4: didFinalizeTurn idempotency
+
+`finalizeCurrentTurn()` line 1159: `if (didFinalizeTurn) return`. Multiple invocations in the same turn (e.g. task_notification then result) only execute the body once. The reset happens via `awaitingNextTurnStart = false; didFinalizeTurn = false` on the next stream_event.
+
+### Integration 5: activeTaskId lifecycle
+
+Set by `task_started`/`task_progress`, cleared by `task_notification`. `finalizeCurrentTurn()` resets it to `null` on line 1162 before calling `opts.onReady()`. Unaffected by gating.
+
+### Integration 6: pending/queue guards in readyHandler
+
+These guard against a racing queued next user message. They operate at the launcher level and are independent of isSubagent gating. For subagent turns they are insufficient (queue may be empty mid-session), so call-site gating is required.
 
 ---
 
-### Confidence Assessment
+## Sources
 
-| Decision | Confidence | Evidence |
-|----------|------------|---------|
-| Daemon startup is the correct injection point | HIGH | Source-traced: child processes inherit daemon's `process.env` via `buildSpawnChildProcessEnv` |
-| Env var is the correct transport | HIGH | `isActionEnabledByEnv` already reads env; no code changes needed downstream |
-| Registration-time filter is correct (not dispatch-time) | HIGH | `listBuiltInHappierTools` called inside `createHappierMcpServer` which is per-request |
-| Option A (standalone top-level key) for file format | MEDIUM | Based on architectural separation principle; team may prefer a different key name |
-| `configuration.settingsFile` is the canonical path | MEDIUM | Path is `~/.happier/settings.json` by default, but milestone context says `~/.happier-dev/settings.json` — verify `HAPPIER_HOME_DIR` default in the deployed environment |
+All findings are HIGH confidence from direct source inspection:
 
-### Gaps
-
-- The milestone context says `~/.happier-dev/settings.json` but `configuration.happyHomeDir` defaults to `~/.happier`. If the deployed `HAPPIER_HOME_DIR` is set to `~/.happier-dev`, they are the same path. Confirm the correct canonical path before implementing the reader.
-- The `mcp` surface value exists in `BuiltInHappierToolsSurface` but `createHappierMcpServer` uses `session_agent`. The external MCP surface (`mcp`) appears unused by the session bridge. Confirm whether per-surface filtering for `mcp` vs `session_agent` is in scope for v1.0.
+- `apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.ts` — lines 1158–1181 (finalizeCurrentTurn), 1519–1557 (task_notification path), 1583–1608 (result path), 1243–1253 (awaitingNextTurnStart reset)
+- `apps/cli/src/backends/claude/claudeRemoteLauncher.ts` — lines 161–198 (createClaudeRemoteReadyHandler), 847–860 (readyHandler instantiation), 992–995 (onReady lambda)
+- `apps/cli/src/agent/runtime/sendReadyWithPushNotification.ts` — full file (sendSessionEvent on line 47, fire-and-forget push on line 68)
+- `apps/cli/src/agent/runtime/readyNotificationContext.ts` — full file (read-only helpers, no state mutations)
+- `apps/cli/src/backends/claude/claudeRemoteLauncher.readyPushPolicy.test.ts` — confirms guard behavior (pending/queue no-op, ready event always precedes push)
