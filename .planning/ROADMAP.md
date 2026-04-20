@@ -47,7 +47,10 @@ Plans:
   1. The `task_notification` handler calls `finalizeSubagentTurn()` and does not call `finalizeCurrentTurn()` — verifiable by reading `claudeRemoteAgentSdk.ts` lines around the `task_notification` branch
   2. A test scenario of subagent completion followed by parent completion produces exactly one ready notification at the relay server — no duplicate ready events, no missing ready event
   3. A test scenario of parent completion with no preceding subagent produces exactly one ready notification — the two-function split does not regress the baseline path (TURN-06 baseline case)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md — Write TURN-06 baseline and multi-subagent tests + produce SC-1 VERIFICATION.md
 
 ## Progress
 
@@ -57,4 +60,4 @@ Plans:
 | 2. Startup Wiring & Tool Filtering | v1.0 | 3/3 | Complete | 2026-04-19 |
 | 3. Validation Feedback | v1.0 | 1/1 | Complete | 2026-04-19 |
 | 4. Restructure finalizeCurrentTurn() | v1.1 | 0/2 | Not started | - |
-| 5. Wire Call Sites and Verify | v1.1 | 0/1 | Not started | - |
+| 5. Verify End-to-End Behavior | v1.1 | 0/1 | Not started | - |
