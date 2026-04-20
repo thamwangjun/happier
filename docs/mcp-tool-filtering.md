@@ -68,16 +68,16 @@ Prevent the session agent from starting a voice agent:
 
 #### Example B — Disable multiple tools
 
-Block the agent from spawning sub-sessions or delegating to subagents:
+Block the agent from delegating to subagents or starting a review:
 
 ```json
 {
   "sessionAgentToolsSettingsV1": {
     "v": 1,
     "tools": {
-      "session_spawn_new": { "enabled": false },
       "subagents_delegate_start": { "enabled": false },
-      "subagents_plan_start": { "enabled": false }
+      "subagents_plan_start": { "enabled": false },
+      "review_start": { "enabled": false }
     }
   }
 }
@@ -93,6 +93,56 @@ If you previously disabled a tool and want to re-enable it, set `"enabled": true
     "v": 1,
     "tools": {
       "voice_agent_start": { "enabled": true }
+    }
+  }
+}
+```
+
+#### Example D — Disable all tools
+
+Run the session agent with no Happier built-in tools exposed — useful for locked-down or read-only sessions:
+
+```json
+{
+  "sessionAgentToolsSettingsV1": {
+    "v": 1,
+    "tools": {
+      "change_title": { "enabled": false },
+      "action_execute": { "enabled": false },
+      "execution_run_start": { "enabled": false },
+      "action_spec_search": { "enabled": false },
+      "action_spec_get": { "enabled": false },
+      "action_options_resolve": { "enabled": false },
+      "review_start": { "enabled": false },
+      "subagents_plan_start": { "enabled": false },
+      "subagents_delegate_start": { "enabled": false },
+      "voice_agent_start": { "enabled": false },
+      "execution_run_list": { "enabled": false },
+      "execution_run_get": { "enabled": false },
+      "execution_run_send": { "enabled": false },
+      "execution_run_stop": { "enabled": false },
+      "execution_run_action": { "enabled": false },
+      "execution_run_wait": { "enabled": false },
+      "agents_backends_list": { "enabled": false },
+      "agents_models_list": { "enabled": false },
+      "session_message_send": { "enabled": false },
+      "session_stop": { "enabled": false },
+      "session_title_set": { "enabled": false },
+      "session_permission_mode_set": { "enabled": false },
+      "session_model_set": { "enabled": false },
+      "session_archive": { "enabled": false },
+      "session_unarchive": { "enabled": false },
+      "session_status_get": { "enabled": false },
+      "session_history_get": { "enabled": false },
+      "session_wait_idle": { "enabled": false },
+      "session_permission_respond": { "enabled": false },
+      "session_user_action_answer": { "enabled": false },
+      "session_list": { "enabled": false },
+      "session_activity_get": { "enabled": false },
+      "session_messages_recent_get": { "enabled": false },
+      "memory_search": { "enabled": false },
+      "memory_get_window": { "enabled": false },
+      "memory_ensure_up_to_date": { "enabled": false }
     }
   }
 }
@@ -212,11 +262,8 @@ These tools are generated from protocol action specs that have `mcpToolName` bin
 | `session_model_set` | Change the active model for a session |
 | `session_permission_mode_set` | Set the permission approval mode for a session |
 | `session_permission_respond` | Respond to a pending permission request |
-| `session_spawn_new` | Spawn a new agent session |
 | `session_status_get` | Get the current status of a session |
 | `session_stop` | Stop a running session |
-| `session_target_primary_set` | Set the primary target directory for a session |
-| `session_target_tracked_set` | Set an additional tracked directory for a session |
 | `session_title_set` | Set the title of a session |
 | `session_unarchive` | Unarchive a previously archived session |
 | `session_user_action_answer` | Answer a user-action prompt raised by the agent |
