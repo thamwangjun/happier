@@ -32,6 +32,8 @@ describe('claudeRemoteAgentSdk baseline turn completion', () => {
         } as any));
     }
 
+    // Must be called once per test — the returned fn closes over mutable `didSendFirst`
+    // state, so sharing one instance across tests would silently corrupt the second test.
     function makeNextMessage() {
         let didSendFirst = false;
         return vi.fn(async () => {
@@ -66,8 +68,9 @@ describe('claudeRemoteAgentSdk baseline turn completion', () => {
     });
 
     it('TURN-06 multi-subagent: two task_notifications then result calls onReady once, onSubagentFlush twice', async () => {
-        const onReady = vi.fn();
-        const onSubagentFlush = vi.fn();
+        const callOrder: string[] = [];
+        const onReady = vi.fn(() => { callOrder.push('onReady'); });
+        const onSubagentFlush = vi.fn(async () => { callOrder.push('onSubagentFlush'); });
 
         await claudeRemoteAgentSdk({
             sessionId: null,
@@ -87,5 +90,7 @@ describe('claudeRemoteAgentSdk baseline turn completion', () => {
 
         expect(onReady).toHaveBeenCalledTimes(1);
         expect(onSubagentFlush).toHaveBeenCalledTimes(2);
+        // Ordering guarantee: both flushes must precede the ready signal
+        expect(callOrder).toEqual(['onSubagentFlush', 'onSubagentFlush', 'onReady']);
     });
 });
