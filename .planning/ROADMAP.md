@@ -50,7 +50,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md — Write TURN-06 baseline and multi-subagent tests + produce SC-1 VERIFICATION.md
+- [x] 05-01-PLAN.md — Write TURN-06 baseline and multi-subagent tests + produce SC-1 VERIFICATION.md
 
 ## Progress
 
