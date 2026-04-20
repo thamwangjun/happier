@@ -68,6 +68,7 @@ All v1.1 decisions captured in PROJECT.md Key Decisions table.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260420-bpn | Merge thamw-turn-fix into current branch | 2026-04-20 | 5c13e8d78 | [260420-bpn-merge-thamw-turn-fix-into-current-branch](./quick/260420-bpn-merge-thamw-turn-fix-into-current-branch/) |
+| 260420-hoa | Write docs on configuring sessionAgentToolsSettingsV1 MCP tool filtering in settings.json | 2026-04-20 | eaf0bb1b5 | [260420-hoa-write-docs-on-configuring-sessionagentto](./quick/260420-hoa-write-docs-on-configuring-sessionagentto/) |
 
 ## Deferred Items
 
