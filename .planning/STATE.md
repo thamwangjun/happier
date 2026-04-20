@@ -63,6 +63,12 @@ All v1.1 decisions captured in PROJECT.md Key Decisions table.
 
 *(none)*
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260420-bpn | Merge thamw-turn-fix into current branch | 2026-04-20 | 5c13e8d78 | [260420-bpn-merge-thamw-turn-fix-into-current-branch](./quick/260420-bpn-merge-thamw-turn-fix-into-current-branch/) |
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
