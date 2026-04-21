@@ -455,17 +455,19 @@ export {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `ReconnectResumeRequestSchema` and `AckUpdateRequestSchema` use `.passthrough()`?**
    - What we know: All existing protocol schemas in `updates.ts` use `.passthrough()`.
    - What is unclear: The CONTEXT.md does not explicitly call out `.passthrough()` for the new schemas.
    - Recommendation: Apply `.passthrough()` consistently with the existing pattern. Risk of omitting is low (these are request schemas, not stored objects), but consistency is the safer choice.
+   - **RESOLVED:** Apply `.passthrough()` per project convention (verified in `updates.ts`). Plans implement this.
 
 2. **Should `replay-complete` and `buffer-overflow` have payload schemas?**
    - What we know: REQUIREMENTS.md says `replay-complete` has no separate payload beyond the event name. `buffer-overflow` may carry `retentionStart` context (SRVR-10).
    - What is unclear: SRVR-10 says the `retentionStart` field is "sent before any replay messages" — it may be part of the `reconnect-resume` response, not a separate event payload.
    - Recommendation: Phase 6 documents that `replay-complete` and `buffer-overflow` currently carry no payload. Phase 8 can extend them if SRVR-10 requires a payload schema. Defer server-response schemas to Phase 8 where the server-side handler is implemented.
+   - **RESOLVED:** No payload schemas for `replay-complete` or `buffer-overflow` in Phase 6. Deferred to Phase 8 if SRVR-10 requires it. Plans implement this.
 
 ---
 
