@@ -49,7 +49,7 @@
 
 Plans:
 - [x] 06-01-PLAN.md — TDD: socketResilience.ts (event constants, request schemas, ACK_DEBOUNCE_MS) + UpdateContainerSchema ackSeq extension, with RED/GREEN test cycles
-- [ ] 06-02-PLAN.md — Wire socketResilience.ts into index.ts public API and append v1.3 resilience section to docs/protocol.md
+- [x] 06-02-PLAN.md — Wire socketResilience.ts into index.ts public API and append v1.3 resilience section to docs/protocol.md
 - [x] 06-03-PLAN.md — Add RELAY_BUFFER_CAP and RELAY_BUFFER_TTL_MS env-var resolvers to server config/backends.ts with safe fallbacks (500 / 120000)
 
 ---
