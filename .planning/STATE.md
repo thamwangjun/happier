@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Request Resilience
-status: in_progress
-stopped_at: Defining requirements
-last_updated: "2026-04-21T00:00:00.000Z"
-last_activity: 2026-04-21
+status: planning
+stopped_at: Phase 6 context gathered
+last_updated: "2026-04-21T12:17:47.100Z"
+last_activity: 2026-04-21 — v1.3 roadmap written (Phases 6-10)
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,16 +25,16 @@ See: .planning/PROJECT.md (updated 2026-04-21)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 6 — Protocol Contract (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-21 — Milestone v1.3 started
+Status: Roadmap created — ready to plan Phase 6
+Last activity: 2026-04-21 — v1.3 roadmap written (Phases 6-10)
 
-Progress: [██████████] 100%
+Progress: [          ] 0% (0/5 phases complete)
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v1.1 reference):**
 
 - Total plans completed: 3
 - Average duration: ~12 min/plan
@@ -53,7 +53,12 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-All v1.1 decisions captured in PROJECT.md Key Decisions table.
+- **Data model:** Two-model design (`UnackedMessage` + `ClientAckState`) chosen over single `RetainedMessage` — separates buffer state from ack cursor state, handles multi-process correctly
+- **Buffer key granularity:** Per-user (`user-scoped:{userId}`) for v1.3; per-device deferred to v1.4 pending `deviceId` in handshake
+- **Overflow behavior:** `buffer-overflow` signal on reconnect → client falls back to `resumeViaChanges`; no data loss, no disconnect
+- **CLI exclusion:** STORE-07 is explicit — CLI session and CLI user sockets are never buffered to prevent replay of expired echo-suppressed messages
+- **CSR skipped:** Socket.IO `connectionStateRecovery` is an optional future optimization; application-level buffer is the mandatory path
+- **Fire-and-forget emit path:** SRVR-01 constraint — buffer write never blocks or throws on the emit path; logged warning only
 
 ### Pending Todos
 
@@ -61,7 +66,9 @@ All v1.1 decisions captured in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-*(none)*
+- SQLite WAL contention under high-frequency streaming is an open question — load test in Phase 10 (VALID-03)
+- Redis Streams multi-process `connectionKey` attribution must be validated empirically in Phase 8 integration tests (SRVR-05)
+- Android Doze / iOS background behavior requires physical device testing in Phase 10 (VALID-04)
 
 ### Quick Tasks Completed
 
@@ -80,9 +87,13 @@ All v1.1 decisions captured in PROJECT.md Key Decisions table.
 |----------|------|--------|-------------|
 | Future refactor | Dedicated subagent handler (Codex-style) if agent-teams becomes primary | Deferred | v1.1 |
 | Future decision | `resetTurnDiagnostics()` scope: gate behind !isSubagent for full-turn diagnostics | Deferred | v1.1 |
+| Future feature | Per-device buffering (`deviceId` in handshake — upstream compatibility) | Deferred | v1.3 |
+| Future feature | UI "reconnecting" badge using existing `connectionStatus` component | Deferred | v1.3 |
+| Future optimization | Socket.IO `connectionStateRecovery` as optional fast-path (full-mode only) | Deferred | v1.3 |
+| Future scope | CLI-to-relay retry direction (CLI already has `localId` idempotency) | Deferred | v1.3 |
 
 ## Session Continuity
 
-Last session: 2026-04-20
-Stopped at: Milestone v1.1 complete
-Resume file: Run /gsd-new-milestone to start next milestone
+Last session: 2026-04-21T12:17:47.096Z
+Stopped at: Phase 6 context gathered
+Resume file: .planning/phases/06-protocol-contract/06-CONTEXT.md
