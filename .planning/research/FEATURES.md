@@ -1,205 +1,116 @@
-# Feature Behavior: Parent vs Subagent Turn Completion
+# Features Research: Request Resilience
 
-**Project:** Happier — v1.1 distinguish parent vs subagent turn completion
-**Researched:** 2026-04-19
-**Confidence:** HIGH (all findings from direct codebase inspection)
-
----
-
-## Ready Signal Semantics
-
-### What `opts.onReady()` does (call graph, verified)
-
-In `claudeRemoteAgentSdk.ts`, `finalizeCurrentTurn()` (line 1158) calls `opts.onReady()` as its last substantive action before `scheduleNextMessagePump()`. The internal work before `opts.onReady()`:
-
-1. Set `didFinalizeTurn = true`, `awaitingNextTurnStart = true`, `activeTaskId = null`
-2. Call `updateThinking(false)` — stops the thinking spinner
-3. Flush `streamedTranscriptWriter` (transcript committed to server)
-4. Log turn diagnostics and reset them via `resetTurnDiagnostics()`
-5. Optionally emit a `completionEvent` string to the mobile UI
-
-`opts.onReady()` is wired in `claudeRemoteLauncher.ts` (line 992):
-
-```typescript
-onReady: async () => {
-    await messageQueue.flush();
-    readyHandler();
-},
-```
-
-`readyHandler` is created by `createClaudeRemoteReadyHandler()` (line 847). That function (line 161) does:
-
-1. **Guard check:** if `pending` is non-null or `session.queue.size() !== 0`, return immediately without sending anything. The ready signal is suppressed when new messages are already queued.
-2. If no `pushSender`, call `session.sendSessionEvent({ type: 'ready' })` directly.
-3. If `pushSender` exists, call `sendReadyWithPushNotification()` which calls `sendSessionEvent({ type: 'ready' })` AND optionally sends a push notification to all registered devices.
-
-### Where does `{ type: 'ready' }` go?
-
-`sendSessionEvent` is an RPC call over the existing Socket.IO session client. The relay server receives it and fans it out to all connected clients (mobile app, web UI, Tauri desktop) as a session event message.
-
-On the mobile/web UI side, `sync.ts` (line 3500) processes incoming messages through the reducer. The `messageToEventConversion.ts` phase (line 48) detects `msg.role === 'event' && msg.content.type === 'ready'`:
-
-- The message is **filtered out of the transcript** — it creates no visible chat bubble
-- It sets `hasReadyEvent = true` and records `readyAt` (the message timestamp)
-- This propagates back to `sync.ts` (line 3500-3503):
-
-```typescript
-if (result.hasReadyEvent) {
-    voiceHooks.onReady(sessionId, m);
-    notifyActivityReady(sessionId, m);
-}
-```
-
-`notifyActivityReady` feeds into `ActivityLocalNotificationRuntime` which fires a local OS notification (Tauri or Expo) if the user is not currently viewing that session.
-
-### What the `ready` event does NOT do directly
-
-The `ready` event does not itself flip `session.thinking` to `false`. That is done separately through the task lifecycle path (`turn_aborted` / `task_complete` agent messages handled in `sync.ts` line 2558). The thinking state update and the `ready` signal are independent flows. The `ready` event's job is specifically:
-
-1. Signal that the agent is awaiting user input (enables input field in UI)
-2. Trigger push notifications to the user's devices
-3. Trigger local OS notifications on the active device if the user is not viewing the session
-4. Trigger voice session hooks for ElevenLabs/LiveKit voice turn management
-
-The reducer also uses `readyAt` to cancel any tool calls still marked as running (spinners), as defensive cleanup for dropped events during reconnects (reducer.ts lines 542-549).
+**Project:** Happier v1.3 — Socket.IO Request Resilience
+**Researched:** 2026-04-21
+**Confidence:** HIGH (core Socket.IO patterns from official docs + codebase verification)
 
 ---
 
-## User-Visible Impact
+## Table Stakes (Must-Have)
 
-### When the parent agent completes a turn (correct behavior)
+These are the features every resilience layer is expected to provide. Absence makes the feature
+feel broken rather than unfinished.
 
-The parent agent emitting `SDKResultMessage` (or a `task_notification` with `status: completed` for the root task) means the entire Claude Code session has finished processing and is waiting for user input. At this point:
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Server-side message retention | Without this, any drop during relay→client delivery is permanent data loss | Medium | Relay must buffer unacked outbound events per-client; in-memory is sufficient for light-mode if bounded by TTL |
+| Client requests re-delivery on reconnect | The client must tell the server "I last received offset X; replay from there" | Medium | Relies on the client durably storing the last confirmed offset across reconnects |
+| Ack-coordinated discard | Server must not discard retained messages until a client ack confirms receipt | Low | Socket.IO callback-ack is the natural primitive; see existing `socketEmitWithAckFallback` pattern |
+| Message-level deduplication (client side) | Re-delivery means duplicates. Client must detect and discard them idempotently | Medium | `localId` already exists in the `message` event payload on both client and server — use it as the dedup key |
+| At-least-once from CLI daemon to relay | CLI daemon should retry sends until the relay acks | Low | Socket.IO `retries` + `ackTimeout` options cover this natively without custom code |
+| Reconnect-triggered replay | On reconnect, client sends its last-confirmed offset; server replays the gap | Medium | This is the core delivery loop; offset mechanics from Socket.IO connection-state-recovery docs |
+| Bounded retention window | Server must not retain messages indefinitely; a TTL (e.g. 5 min) bounds memory | Low | Configurable; light-mode can use in-memory TTL map, full-mode uses Redis key TTL |
 
-- The input field in the mobile/web UI should become enabled (no longer blocked by "agent is thinking")
-- The thinking spinner stops
-- Push notifications are sent to all paired devices ("Claude is ready")
-- Local OS notifications fire if the user is not viewing the session
-- Voice session hooks fire for voice turn handoff
-- The message queue is flushed so all pending conversation messages are delivered before the ready signal
-
-This is the correct moment to call `readyHandler()`.
-
-### When a subagent completes (premature behavior, current bug)
-
-When Claude Code uses agent teams (`claudeCodeExperimentalAgentTeamsEnabled`), it spawns subagents as tasks. A `task_notification` with `status: completed` or `stopped` fires for each subagent that finishes — before the parent agent has completed its own turn.
-
-`finalizeCurrentTurn()` is called on that `task_notification` path (claudeRemoteAgentSdk.ts lines 1535-1537):
-
-```typescript
-} else if (subtype === 'task_notification') {
-    ...
-    if (status === 'stopped' || status === 'failed' || status === 'completed') {
-        await finalizeCurrentTurn();
-    }
-}
-```
-
-Currently this calls `opts.onReady()` unconditionally, meaning all of the above user-visible actions fire while the parent agent is still running.
+**Source confidence:** HIGH — all items verified against Socket.IO v4 official documentation (delivery-guarantees and connection-state-recovery pages at socket.io/docs/v4/) and the existing Happier codebase. The server `sessionUpdateHandler.ts` already acks `message` events with `{ ok, id, seq, localId, didWrite }`; `socketEmitWithAckFallback.ts` already handles ack-timeout fallback.
 
 ---
 
-## Premature Ready Consequences
+## Differentiators (Nice-to-Have)
 
-### Consequence 1: False "done" push notifications (HIGH severity)
+Features that distinguish a high-quality implementation from a minimal one. Users notice the
+polish but will not call the product broken if these are absent.
 
-The user receives a device push notification saying Claude is finished, taps into the app, and sees the agent still running. This is a broken UX trust signal. If a multi-agent run uses several subagents, the user receives spam notifications during what should be a single uninterrupted turn.
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Exponential backoff on retry | Avoids thundering-herd on server restart | Low | `reconnectBackoff.ts` in `packages/connection-supervisor` already implements this — wire into retry scheduler |
+| Per-client retention cap | Prevents a stuck mobile client from exhausting server RAM | Low | 100-message cap per session per client; simple ring-buffer or sliding window on the retained map |
+| Reconnect status in UI | Show a "reconnecting" badge when Socket.IO is offline | Low | Extend existing `apps/ui/sources/components/navigation/connectionStatus`; offline-tracking tests already exist in `sync.socketOfflineTracking.test.ts` |
+| Offline queue drain before replay | After reconnect, flush mobile pending queue before requesting server replay so ordering is correct | Medium | Touches `pendingQueueV2.ts` ordering; drain must complete before replay to avoid interleaving |
+| Graceful degradation path | If reconnect fails after max retries and no recovery is possible, surface a clear "session may be incomplete" warning rather than silently losing data | Low | UX copy + a state flag; no protocol change |
+| Idempotency on server for already-seen localId | `createSessionMessage` already returns `didWrite: false` when a `localId` is a duplicate — wire the ack path to still return `ok: true` so the client stops retrying | Low | Already partially in place; needs explicit test coverage |
 
-**Source:** `sendReadyWithPushNotification` is called via `readyHandler()` — which fires on every `finalizeCurrentTurn()` call that passes the guard.
-
-### Consequence 2: Premature input enablement (HIGH severity)
-
-The mobile UI receives `{ type: 'ready' }` from the server. The reducer sets `hasReadyEvent = true`. Any UI that gates user input on thinking/ready state displays the input field as active while the parent agent is still executing.
-
-If the user sends a message, the daemon's `waitForMessagesOrPending` picks it up and pushes it into the `PushableAsyncIterable` feeding the Claude Agent SDK — injecting a user message into an in-flight turn, which causes context corruption or unexpected Claude behavior.
-
-### Consequence 3: Suppressed legitimate parent-completion ready (HIGH severity)
-
-This is the most insidious consequence. The `readyHandler` guard (lines 175-176):
-
-```typescript
-if (params.getPending()) return;
-if (params.getQueueSize() !== 0) return;
-```
-
-Additionally, `finalizeCurrentTurn()` sets `didFinalizeTurn = true` on line 1160. The parent's `result` message path checks this guard at line 1597:
-
-```typescript
-if (didFinalizeTurn) {
-    continue;
-}
-```
-
-This means: if the subagent completion fires `finalizeCurrentTurn()` first and sets `didFinalizeTurn = true`, the parent's `result` message is silently skipped. **The parent-completion ready never fires.** The user never receives the legitimate "Claude is done" notification for the actual turn boundary.
-
-This is why `didFinalizeTurn = true` must also be gated behind `if (!isSubagent)` in the fix — not just `opts.onReady()`.
-
-### Consequence 4: Voice session hooks fire at wrong time (MEDIUM severity)
-
-`voiceHooks.onReady(sessionId, m)` is called in `sync.ts` when `hasReadyEvent` is true. This advances the voice conversation turn state. Firing on subagent completion incorrectly signals voice turn end, which may cut off the voice assistant's listening state or advance to the next turn prompt prematurely.
-
-### Consequence 5: Redundant transcript flushes and diagnostic resets (LOW severity)
-
-`flushStreamedTranscriptWriter('turn-end')` and `resetTurnDiagnostics()` fire in `finalizeCurrentTurn()`. On subagent completion, the transcript flush is legitimate (subagent output should be committed). However `resetTurnDiagnostics()` resets counters mid-parent-turn, so parent-turn diagnostics logged at actual turn end reflect only post-subagent activity, not the full turn. This is a logging/observability issue, not a user-facing correctness issue.
-
-### What does NOT break
-
-The transcript itself is correct. Subagent messages flow through the sidechain mechanism (`parent_tool_use_id`) and the main-chain transcript is unaffected by `finalizeCurrentTurn()` being called prematurely on the content side.
+**Source confidence:** MEDIUM — exponential backoff verified from codebase (`reconnectBackoff.ts`). Per-client cap is a standard pattern from websocket system design. Server idempotency verified from `sessionUpdateHandler.ts` line 421 (`didWrite` already tracked and returned).
 
 ---
 
-## Fix Constraints
+## Anti-Features (Avoid)
 
-### `isSubagent` must gate both `opts.onReady()` AND `didFinalizeTurn = true`
+Patterns that appear to help but cause correctness, security, or complexity problems.
 
-Gating only `opts.onReady()` is insufficient. The `didFinalizeTurn` flag prevents the parent's `result` message from triggering a second `finalizeCurrentTurn()` call (line 1597 guard). Without also gating `didFinalizeTurn`, the real parent completion boundary is silently dropped and `opts.onReady()` never fires for the parent turn.
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Exactly-once delivery via distributed lock | Requires cross-node coordination (Redis SETNX races, DB advisory locks) and is extremely difficult to make correct under partial failures. Socket.IO v4 explicitly does not attempt this. | At-least-once + idempotent consumers. Server already returns `didWrite: false` for duplicates; client already has `localId` for dedup. These two together give practical exactly-once semantics. |
+| Socket.IO built-in connection-state-recovery as the sole strategy | Built-in CSR only works within `maxDisconnectionDuration` (default 2 min). It does NOT work with the standard Redis adapter — only Redis Streams and in-memory. Happier supports both Redis adapter modes depending on deployment. | Use CSR as an opportunistic fast-path in full-mode only; build application-level offset replay as the always-available fallback. |
+| Infinite retention on the relay | Retaining messages forever per client will OOM the relay or bloat Redis, especially for clients that disconnect and never return. | TTL-bound retention. 5 minutes covers mobile reconnect scenarios generously; make it configurable via feature flag. |
+| Global sequence numbers across sessions | A single global counter for all session messages creates a hot-write bottleneck and makes per-session replay harder to reason about. | Per-session sequence numbers. The server already issues per-session `seq` on message insert (verified in `sessionUpdateHandler.ts` line 415). |
+| Re-using socket.id as the dedup key | `socket.id` changes on every reconnect — useless as a stable client identity. | Use `localId` (UUID, already sent with every `message` event) as the stable, client-generated dedup key. |
+| Blocking UI on replay completion | Waiting for server replay to finish before showing the session causes noticeable perceived latency after every reconnect. | Show stale state immediately; append replayed messages as they arrive. |
+| Retry loop without ack timeout | A retry that never times out can hammer the server and mask a permanent failure. | Socket.IO `ackTimeout` + finite `retries` count (or exponential backoff with a hard ceiling). |
+| Content hash as dedup key | Happier messages are E2E-encrypted ciphertext — content hashing is semantically meaningless at the relay layer. Hash collisions cannot be detected without decryption. | Use `localId` (client-generated, stable, already in the protocol). |
 
-The correct approach:
-
-```typescript
-const finalizeCurrentTurn = async (isSubagent: boolean, params?: { completionEvent?: string }) => {
-    if (!isSubagent) {
-        if (didFinalizeTurn) return;
-        didFinalizeTurn = true;
-        awaitingNextTurnStart = true;
-    }
-    activeTaskId = null;
-    updateThinking(false);
-    // ... flush transcript, log diagnostics, reset diagnostics ...
-    if (params?.completionEvent) {
-        opts.onCompletionEvent?.(params.completionEvent);
-    }
-    if (!isSubagent) {
-        await opts.onReady();
-    }
-    scheduleNextMessagePump();
-};
-```
-
-### `scheduleNextMessagePump()` must still run on subagent completion
-
-The message pump must stay active while the parent is still running. `scheduleNextMessagePump` is idempotent (`if (nextMessagePump) return;`) so calling it on subagent events is safe and necessary.
-
-### Call sites
-
-From code inspection, three call sites of `finalizeCurrentTurn()`:
-
-1. **`task_notification` with `stopped/failed/completed` status (line 1536):** Subagent path. Use `finalizeCurrentTurn(true)`.
-2. **`result` message path (line 1607):** Parent agent completing its turn. Use `finalizeCurrentTurn(false)`.
-3. **Compact command paths (lines 1554, 1603):** Session-level operation, parent context. Use `finalizeCurrentTurn(false)`.
+**Source confidence:** HIGH — CSR adapter limitation verified from Socket.IO official docs adapter compatibility table. `socket.id` instability documented on the Socket.IO client instance docs page. `localId` and `didWrite` presence verified from codebase.
 
 ---
 
-## Sources
+## Deduplication Strategies Compared
 
-All findings are from direct codebase inspection (HIGH confidence):
+| Strategy | Pros | Cons | Verdict |
+|----------|------|------|---------|
+| **Client-generated UUID per message (`localId`)** | Already in Happier protocol on both sides; server stores and echoes it; natural idempotency key | UUID must be generated before send and durably stored by client until ack received | **Use this. It is the right approach for Happier.** The `localId` field already travels in every `message` event and the server already deduplicates on insert (`didWrite: false` on conflict). |
+| **Monotonic sequence number (per client, per session)** | Simple integer comparison; easy to detect gaps; enables ordered replay without full-message storage | Requires persistent counter across app restarts; breaks on reinstall; must be durable (not in-memory) | Use the server-assigned `seq` as the replay cursor for server→client direction. Do not use a client-generated monotonic counter as the primary dedup key. |
+| **Socket.IO built-in offset (`__offset`)** | Zero custom code; automatic if using Redis Streams or in-memory adapter | Best-effort only; does not survive `maxDisconnectionDuration`; incompatible with standard Redis adapter; requires server to emit at least one event to initialize | Use opportunistically in full-mode (Redis Streams), but do not rely on it alone. It is an optimization, not a foundation. |
+| **Server-side idempotency key with DB UNIQUE constraint** | Guarantees exactly-once insert; simple to audit | Only covers client→server direction; client still needs its own dedup for server→client re-delivery | Already the right pattern for client→server (matches Socket.IO tutorial step 8 recommendation). Pair with per-session `seq` cursor for server→client. |
+| **Content hash as dedup key** | No client-side state needed | Ciphertext hashing is meaningless without decryption; relay cannot evaluate semantic identity | Do not use for E2E-encrypted messages. |
 
-- `apps/cli/src/backends/claude/remote/claudeRemoteAgentSdk.ts` — `finalizeCurrentTurn()` body, `task_notification` handler, `result` message handler, `didFinalizeTurn` guard
-- `apps/cli/src/backends/claude/claudeRemoteLauncher.ts` — `createClaudeRemoteReadyHandler()`, `onReady` wiring, `readyHandler` guard logic
-- `apps/ui/sources/sync/reducer/phases/messageToEventConversion.ts` — `ready` event filtering, `hasReadyEvent` / `readyAt` propagation
-- `apps/ui/sources/sync/reducer/reducer.ts` — `cancelRunningTools` on `readyAt`
-- `apps/ui/sources/sync/sync.ts` — `notifyActivityReady()` and `voiceHooks.onReady()` on `hasReadyEvent`
-- `apps/ui/sources/activity/notifications/runtime/ActivityLocalNotificationRuntime.tsx` — local OS notification on ready
-- `apps/ui/sources/activity/notifications/runtime/activityLocalNotificationBus.ts` — notification bus definition
-- `apps/cli/src/api/session/sessionMessageTypes.ts` — `SessionEventMessage` type including `{ type: 'ready' }`
-- `apps/cli/src/backends/claude/claudeRemoteLauncher.readyPushPolicy.test.ts` — test confirming push + `sendSessionEvent` both fire on `onReady()`
+**Recommendation:** Two-key system: `localId` (UUID) for client→server dedup; per-session `seq` as the replay cursor for server→client re-delivery. Both fields already exist in the protocol.
+
+---
+
+## Error Classes to Cover
+
+Socket.IO and network error scenarios with expected behavior for each.
+
+| Error Class | Trigger | Expected Handling |
+|-------------|---------|------------------|
+| **Transport disconnect (WebSocket close)** | Mobile goes offline, WiFi switches, VPN/tunnel drops | Automatic reconnect via `ManagedConnectionSupervisor` (already in place). On reconnect, client sends last confirmed `seq` to request gap replay. |
+| **Ack timeout (client→server send)** | Server is slow to ack or message never arrives | `socketEmitWithAckFallback` fires-and-forgets after timeout today. Must also enqueue the message for retry on next reconnect, not just call `onNoAck`. |
+| **Ack timeout (server→client emit)** | Relay emits event to mobile but ack is too slow or connection drops mid-flight | Server retains the message in the per-client buffer until a successful ack or TTL expiry. This is the core new server-side behavior needed for v1.3. |
+| **Failed ack (server returns explicit error)** | Server processes message but returns `{ ok: false, error: 'forbidden' }` or `'invalid-params'` | Client must NOT retry on explicit rejections. Retry only on timeout/network errors. Already partially handled by the `respond` pattern in `sessionUpdateHandler.ts`. |
+| **Duplicate delivery on replay** | Replay window overlaps with already-processed messages | Client drops duplicate on `localId` match. Server drops duplicate on `localId` DB constraint. Both sides must handle gracefully without surfacing an error to the user. |
+| **Recovery window expired (server lost the buffer)** | Client reconnects after the TTL has elapsed | Server signals "no buffer available" (or equivalent). Client falls back to full session re-fetch via the existing HTTP changes endpoint. This is the existing cold-start path — the resilience layer must not break it. |
+| **App backgrounded / process suspended** | iOS/Android suspends the app mid-session | Socket disconnects. On foreground, reconnect fires. Treat identically to transport disconnect. `sync.socketOfflineDuration` tracking (existing tests in `sync.socketOfflineTracking.test.ts`) already measures this. |
+| **Server restart (light mode)** | Relay process restarts; all in-memory socket state and buffers lost | In-memory retention does not survive restart. Server signals this via a new socket ID. Client must fall back to full re-fetch. Document this as a known limitation of light-mode. |
+| **Server restart (full mode)** | Relay process restarts; Redis-backed buffers survive | Buffers survive if keyed in Redis. Client can still replay. This is a differentiator of the full-mode deployment. |
+| **Concurrent reconnect race** | Two sockets from the same client connect simultaneously (tab restored while reconnect in flight) | Server must accept only one active session per client and close the stale one. Existing `sessionScopedBinding.ts` handles session-scoped dedup at the socket level — verify it handles this race. |
+| **RPC forward timeout** | CLI RPC call times out on relay while forwarding to daemon | `rpcForwardTimeout.ts` already handles this independently. The resilience layer must not interfere with the RPC delivery path — they are separate event types. |
+
+**Source confidence:** HIGH for transport disconnect, ack timeout, duplicate delivery, and server restart distinctions (verified from codebase and Socket.IO docs). MEDIUM for concurrent reconnect race (inferred from `sessionScopedBinding.ts` existence; specific race handling not confirmed in code). LOW for light-mode restart buffer loss being a "known limitation" worth documenting (architectural inference — verify during implementation).
+
+---
+
+## Dependency on Existing Features
+
+Every item below already exists and must be extended (not replaced) by v1.3.
+
+| Existing Feature | Location | What Must Change |
+|-----------------|----------|-----------------|
+| **`socketEmitWithAckFallback`** | `apps/ui/sources/sync/engine/socket/socketEmitWithAckFallback.ts` | Currently fires-and-forgets after ack failure. Must also enqueue the message for replay on next reconnect, not just call `onNoAck`. |
+| **`pendingQueueV2`** | `apps/ui/sources/sync/engine/pending/pendingQueueV2.ts` | Existing pending queue holds client→server messages waiting while agent is busy. A separate (or parallel) structure is needed for messages awaiting server delivery ack. These have different semantics and should not be conflated. |
+| **`sessionUpdateHandler` (server)** | `apps/server/sources/app/api/socket/sessionUpdateHandler.ts` | Already acks `message` events with `{ ok, id, seq, localId, didWrite }`. Must be extended to: (1) buffer outbound events per-client until acked, (2) handle a replay-request event from clients on reconnect. |
+| **`ManagedConnectionSupervisor`** | `packages/connection-supervisor/src/` | Already tracks `onConnected`, `onDisconnected`, `onBeforeReconnect`. The `onConnected` hook is the natural injection point for triggering the client's replay-request after a reconnect. |
+| **`socket.ts` (sync engine)** | `apps/ui/sources/sync/engine/socket/socket.ts` | Already handles incoming socket updates (`applyMessages`, `markSessionMaterializedMaxSeq`). Must deduplicate replayed messages before applying, and must update the durable last-confirmed-seq after successful apply. |
+| **`eventRouter` (server)** | Referenced from `sessionUpdateHandler.ts` as `eventRouter.emitUpdate` | Emits updates to connected clients. Must be extended to retain unacked events in a per-client buffer keyed by socket ID, with TTL-based eviction. |
+| **`socketMessageAckCounter` (metrics)** | `apps/server/sources/app/monitoring/metrics2.ts` | Already tracks `result: 'ok' | 'error'`. Extend with `result: 'redelivered'` and `result: 'duplicate-dropped'` to make the resilience layer observable in Prometheus. |
+| **Per-session `seq`** | Already emitted by server on message insert (line 415 `sessionUpdateHandler.ts`) | Expose as the replay cursor. Client must durably store the last `seq` it successfully applied per session. Suitable storage: MMKV via the existing `storage` domain in the sync engine. |
+
+**Source confidence:** HIGH — all locations verified by reading source files. Behavioral changes are inferred from the current code's responsibilities.
