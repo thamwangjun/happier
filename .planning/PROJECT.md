@@ -127,9 +127,20 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tool registration filter: absent or missing key defaults to `enabled: true`; corrupt config falls back to all-tools-enabled with `logger.warn` — v1.0
 - ✓ Validation feedback: `findUnknownSessionAgentToolNames` warns on unrecognized tool names at startup without affecting valid entries — v1.0
 
+## Current Milestone: v1.3 Request Resilience
+
+**Goal:** Socket.IO messages between the CLI daemon and mobile/web clients survive network interruptions and reconnects without data loss or duplication.
+
+**Target features:**
+- Server-side message retention: relay holds unacked messages so they can be re-delivered after a client reconnects
+- Client-side retry: mobile/web detects dropped messages on reconnect and requests re-delivery
+- Ack-coordinated delivery: both sides use acknowledgements to confirm receipt before discarding retained messages
+- Deduplication: client and server identify and discard duplicate messages on re-delivery
+- Broader error coverage: timeouts, failed acks, and other Socket.IO error classes
+
 ### Active
 
-*(No active requirements — planning next milestone)*
+*(Requirements being defined — see REQUIREMENTS.md)*
 
 ### Out of Scope
 
@@ -191,4 +202,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v1.1 milestone — Distinguish Parent vs Subagent Turn Completion shipped*
+*Last updated: 2026-04-21 — Milestone v1.3 Request Resilience started*
