@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-20)
 Phase: —
 Plan: —
 Status: Milestone v1.1 complete — planning next milestone
-Last activity: 2026-04-20
+Last activity: 2026-04-21 - Completed quick task 260421-e7r: Cherry pick only .planning/ changes from thamw-dev branch to current branch.
 
 Progress: [██████████] 100%
 
@@ -72,6 +72,7 @@ All v1.1 decisions captured in PROJECT.md Key Decisions table.
 | 260420-iyc | Add disable-all-tools example to docs/mcp-tool-filtering.md | 2026-04-20 | 773b18341 | [260420-iyc-add-disable-all-tools-example-to-docs-mc](./quick/260420-iyc-add-disable-all-tools-example-to-docs-mc/) |
 | 260420-luh | Fix invalid tool names in Example D of docs/mcp-tool-filtering.md | 2026-04-20 | 0f0d6d3f9 | [260420-luh-fix-invalid-tool-names-in-example-d-of-d](./quick/260420-luh-fix-invalid-tool-names-in-example-d-of-d/) |
 | 260420-lzp | Merge thamw-mcp-config into this branch | 2026-04-20 | 735dfb0b4 | [260420-lzp-merge-thamw-mcp-config-into-this-branch](./quick/260420-lzp-merge-thamw-mcp-config-into-this-branch/) |
+| 260421-e7r | Cherry pick only .planning/ changes from thamw-dev branch to current branch. | 2026-04-21 | de24b008a | [260421-e7r-cherry-pick-only-planning-changes-from-t](./quick/260421-e7r-cherry-pick-only-planning-changes-from-t/) |
 
 ## Deferred Items
 
