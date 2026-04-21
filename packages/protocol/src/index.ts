@@ -431,6 +431,15 @@ export {
 export { applyInstallablePolicyOverride, resolveInstallablePolicy, type InstallablePolicyOverride } from './installablesPolicy.js';
 export { SOCKET_RPC_EVENTS, type SocketRpcEvent } from './socketRpc.js';
 export {
+    ACK_DEBOUNCE_MS,
+    AckUpdateRequestSchema,
+    ReconnectResumeRequestSchema,
+    SOCKET_RESILIENCE_EVENTS,
+    type AckUpdateRequest,
+    type ReconnectResumeRequest,
+    type SocketResilienceEvent,
+} from './socketResilience.js';
+export {
   ChangeEntrySchema,
   ChangeKindSchema,
   ChangesResponseSchema,
