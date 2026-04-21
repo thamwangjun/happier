@@ -82,43 +82,41 @@
 
 ## Traceability
 
-*Filled by roadmapper.*
-
-| REQ-ID | Phase |
-|--------|-------|
-| PROTO-01 | — |
-| PROTO-02 | — |
-| PROTO-03 | — |
-| PROTO-04 | — |
-| PROTO-05 | — |
-| STORE-01 | — |
-| STORE-02 | — |
-| STORE-03 | — |
-| STORE-04 | — |
-| STORE-05 | — |
-| STORE-06 | — |
-| STORE-07 | — |
-| SRVR-01 | — |
-| SRVR-02 | — |
-| SRVR-03 | — |
-| SRVR-04 | — |
-| SRVR-05 | — |
-| SRVR-06 | — |
-| SRVR-07 | — |
-| SRVR-08 | — |
-| SRVR-09 | — |
-| SRVR-10 | — |
-| MOB-01 | — |
-| MOB-02 | — |
-| MOB-03 | — |
-| MOB-04 | — |
-| MOB-05 | — |
-| MOB-06 | — |
-| MOB-07 | — |
-| MOB-08 | — |
-| MOB-09 | — |
-| MOB-10 | — |
-| VALID-01 | — |
-| VALID-02 | — |
-| VALID-03 | — |
-| VALID-04 | — |
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| PROTO-01 | Phase 6 | Pending |
+| PROTO-02 | Phase 6 | Pending |
+| PROTO-03 | Phase 6 | Pending |
+| PROTO-04 | Phase 6 | Pending |
+| PROTO-05 | Phase 6 | Pending |
+| STORE-01 | Phase 7 | Pending |
+| STORE-02 | Phase 7 | Pending |
+| STORE-03 | Phase 7 | Pending |
+| STORE-04 | Phase 7 | Pending |
+| STORE-05 | Phase 7 | Pending |
+| STORE-06 | Phase 7 | Pending |
+| STORE-07 | Phase 7 | Pending |
+| SRVR-01 | Phase 8 | Pending |
+| SRVR-02 | Phase 8 | Pending |
+| SRVR-03 | Phase 8 | Pending |
+| SRVR-04 | Phase 8 | Pending |
+| SRVR-05 | Phase 8 | Pending |
+| SRVR-06 | Phase 8 | Pending |
+| SRVR-07 | Phase 8 | Pending |
+| SRVR-08 | Phase 8 | Pending |
+| SRVR-09 | Phase 8 | Pending |
+| SRVR-10 | Phase 8 | Pending |
+| MOB-01 | Phase 9 | Pending |
+| MOB-02 | Phase 9 | Pending |
+| MOB-03 | Phase 9 | Pending |
+| MOB-04 | Phase 9 | Pending |
+| MOB-05 | Phase 9 | Pending |
+| MOB-06 | Phase 9 | Pending |
+| MOB-07 | Phase 9 | Pending |
+| MOB-08 | Phase 9 | Pending |
+| MOB-09 | Phase 9 | Pending |
+| MOB-10 | Phase 9 | Pending |
+| VALID-01 | Phase 10 | Pending |
+| VALID-02 | Phase 10 | Pending |
+| VALID-03 | Phase 10 | Pending |
+| VALID-04 | Phase 10 | Pending |
