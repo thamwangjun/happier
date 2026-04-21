@@ -202,3 +202,62 @@ See `api.md` for the full HTTP endpoint catalog and auth flows.
 - API routes: `apps/server/sources/app/api/routes`
 - Socket handlers: `apps/server/sources/app/api/socket`
 - Event routing: `apps/server/sources/app/events/eventRouter.ts`
+
+## v1.3 Resilience Events (Request Resilience)
+
+These events were added in v1.3 to support guaranteed message delivery across disconnects.
+
+### Client → server events
+
+#### `reconnect-resume`
+Emitted by the mobile/web client on every socket reconnect. The server uses `lastAckedSeq`
+to determine which buffered messages to replay.
+
+Payload: `ReconnectResumeRequestSchema` from `@happier-dev/protocol`
+```
+{ sessionId: string, lastAckedSeq: number }
+```
+
+#### `ack-update`
+Emitted by the client to confirm delivery of all messages up to and including `seq`.
+The server discards buffer entries at or below `seq` for this client.
+
+Payload: `AckUpdateRequestSchema` from `@happier-dev/protocol`
+```
+{ sessionId: string, seq: number }
+```
+
+### Server → client events
+
+#### `replay-complete`
+Emitted by the server in all reconnect paths: after the last buffered message is sent,
+after `buffer-overflow` is signalled, or immediately if the buffer is empty.
+This is the universal gate-release signal for the mobile outbound queue.
+
+No payload.
+
+#### `buffer-overflow`
+Emitted during reconnect when the buffer for this client was capped (overflow occurred
+before the client reconnected). The client must fall back to the HTTP catch-up path
+(`resumeViaChanges`). Server still emits `replay-complete` after this event.
+
+No payload.
+
+### Update envelope change
+
+The existing `update` event envelope (`UpdateContainerSchema`) gains an optional field:
+- `ackSeq?: number` — server-side ack hint piggybacked on outbound payloads. Clients
+  that omit or ignore this field are fully backward compatible.
+
+### Client constants
+
+| Constant | Value | Location | Description |
+|----------|-------|----------|-------------|
+| `ACK_DEBOUNCE_MS` | 500ms | `@happier-dev/protocol` | Debounce window before the mobile client emits `ack-update`. Both server and mobile must use this value — do not hardcode 500 independently. |
+
+### Upstream compatibility notes
+- All four new events (`reconnect-resume`, `ack-update`, `replay-complete`, `buffer-overflow`)
+  are additive. Servers without v1.3 will not emit or handle these events; clients that emit
+  `reconnect-resume` to a pre-v1.3 server receive no replay and no error.
+- `ackSeq` on `UpdateContainerSchema` is optional. Pre-v1.3 clients that omit `ackSeq` on
+  outbound messages receive no TypeScript or Zod error.
