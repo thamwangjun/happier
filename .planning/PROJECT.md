@@ -142,6 +142,12 @@ A developer can start an AI coding session on their machine and seamlessly conti
 
 *(Requirements being defined — see REQUIREMENTS.md)*
 
+**Protocol Contract (validated in Phase 06: Protocol Contract)**
+- ✓ `socketResilience.ts` — `SOCKET_RESILIENCE_EVENTS` const, `ReconnectResumeRequestSchema`, `AckUpdateRequestSchema`, `ACK_DEBOUNCE_MS=500` exported from `@happier-dev/protocol`
+- ✓ `UpdateContainerSchema` extended with `ackSeq: z.number().int().min(0).optional()` (backward compatible)
+- ✓ `docs/protocol.md` and `docs/PROTOCOL_CHANGES.md` document all v1.3 resilience events
+- ✓ `getRelayBufferCapFromEnv` (default 500) and `getRelayBufferTtlMsFromEnv` (default 120,000ms) in server config
+
 ### Out of Scope
 
 - Per-project `.mcp.json` overrides (deferred — user-global settings first)
@@ -202,4 +208,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 — Milestone v1.3 Request Resilience started*
+*Last updated: 2026-04-21 — Phase 06 (Protocol Contract) complete*
