@@ -3,7 +3,7 @@ export type ServerFlavor = "full" | "light";
 export type FilesBackend = "local" | "s3";
 export type SocketAdapter = "memory" | "redis-streams";
 
-import { parseBooleanEnv } from "./env";
+import { parseBooleanEnv, parseIntEnv } from "./env";
 
 function normalizeToken(raw: string): string {
     return raw.trim().toLowerCase();
@@ -47,4 +47,15 @@ export function isRedisStreamsEnabled(env: NodeJS.ProcessEnv, adapter: SocketAda
     if (adapter !== "redis-streams") return false;
     const url = env.REDIS_URL?.trim();
     return typeof url === "string" && url.length > 0;
+}
+
+export const RELAY_BUFFER_CAP_DEFAULT = 500;
+export const RELAY_BUFFER_TTL_MS_DEFAULT = 120_000;
+
+export function getRelayBufferCapFromEnv(env: NodeJS.ProcessEnv, fallback: number = RELAY_BUFFER_CAP_DEFAULT): number {
+    return parseIntEnv(env.RELAY_BUFFER_CAP, fallback);
+}
+
+export function getRelayBufferTtlMsFromEnv(env: NodeJS.ProcessEnv, fallback: number = RELAY_BUFFER_TTL_MS_DEFAULT): number {
+    return parseIntEnv(env.RELAY_BUFFER_TTL_MS, fallback);
 }
