@@ -45,11 +45,12 @@
   3. `UpdateContainerSchema` accepts payloads with or without `ackSeq` — a client on the old protocol that omits `ackSeq` receives no TypeScript or Zod error
   4. The relay reads `RELAY_BUFFER_CAP` and `RELAY_BUFFER_TTL_MS` from environment at startup and falls back to safe defaults (500 / 120000) when the variables are absent or non-numeric
   5. `ackDebounceMs` (500ms) is documented in `PROTOCOL_CHANGES.md` as the authoritative mobile client constant, preventing each side from choosing a different value independently
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 - [ ] 06-01-PLAN.md — TDD: socketResilience.ts (event constants, request schemas, ACK_DEBOUNCE_MS) + UpdateContainerSchema ackSeq extension, with RED/GREEN test cycles
 - [ ] 06-02-PLAN.md — Wire socketResilience.ts into index.ts public API and append v1.3 resilience section to docs/protocol.md
+- [ ] 06-03-PLAN.md — Add RELAY_BUFFER_CAP and RELAY_BUFFER_TTL_MS env-var resolvers to server config/backends.ts with safe fallbacks (500 / 120000)
 
 ---
 
@@ -125,7 +126,7 @@ Plans:
 | 3. Validation Feedback | v1.0 | 1/1 | Complete | 2026-04-19 |
 | 4. Restructure finalizeCurrentTurn() | v1.1 | 2/2 | Complete | 2026-04-19 |
 | 5. Verify End-to-End Behavior | v1.1 | 1/1 | Complete | 2026-04-20 |
-| 6. Protocol Contract | v1.3 | 0/2 | Not started | - |
+| 6. Protocol Contract | v1.3 | 0/3 | Not started | - |
 | 7. Server Storage Layer | v1.3 | 0/? | Not started | - |
 | 8. Server Socket Integration | v1.3 | 0/? | Not started | - |
 | 9. Mobile Reconnect and Deduplication | v1.3 | 0/? | Not started | - |
