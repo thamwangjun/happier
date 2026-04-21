@@ -153,4 +153,14 @@ describe('protocol package root exports', () => {
         expect(typeof (protocol as any).buildBackendTargetKey).toBe('function');
         expect((protocol as any).buildBackendTargetKey({ kind: 'configuredAcpBackend', backendId: 'review' })).toBe('acpBackend:review');
     });
+
+    it('exports socketResilience schemas and constants for request resilience', () => {
+        expect(typeof protocol.ReconnectResumeRequestSchema).toBe('object');
+        expect(typeof protocol.AckUpdateRequestSchema).toBe('object');
+        expect(protocol.ACK_DEBOUNCE_MS).toBe(500);
+        expect(protocol.SOCKET_RESILIENCE_EVENTS.RECONNECT_RESUME).toBe('reconnect-resume');
+        expect(protocol.SOCKET_RESILIENCE_EVENTS.ACK_UPDATE).toBe('ack-update');
+        expect(protocol.SOCKET_RESILIENCE_EVENTS.REPLAY_COMPLETE).toBe('replay-complete');
+        expect(protocol.SOCKET_RESILIENCE_EVENTS.BUFFER_OVERFLOW).toBe('buffer-overflow');
+    });
 });
