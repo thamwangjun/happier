@@ -46,6 +46,10 @@
       "types": "./dist/socketRpc.d.ts",
       "default": "./dist/socketRpc.js"
     },
+    "./socketResilience": {
+      "types": "./dist/socketResilience.d.ts",
+      "default": "./dist/socketResilience.js"
+    },
     "./changes": {
       "types": "./dist/changes.d.ts",
       "default": "./dist/changes.js"
