@@ -2,7 +2,7 @@
 phase: 8
 slug: server-socket-integration
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-22
 ---
@@ -17,18 +17,18 @@ created: 2026-04-22
 
 | Property | Value |
 |----------|-------|
-| **Framework** | {pytest 7.x / jest 29.x / vitest / go test / other} |
-| **Config file** | {path or "none — Wave 0 installs"} |
-| **Quick run command** | `{quick command}` |
-| **Full suite command** | `{full command}` |
+| **Framework** | vitest |
+| **Config file** | `apps/server/vitest.config.ts` |
+| **Quick run command** | `cd apps/server && yarn vitest --reporter verbose sources/app/api/socket/resilienceHandler.integration.spec.ts` |
+| **Full suite command** | `cd apps/server && yarn test && cd ../cli && yarn test` |
 | **Estimated runtime** | ~8 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `{quick run command}`
-- **After every plan wave:** Run `{full suite command}`
+- **After every task commit:** Run `cd apps/server && yarn vitest --reporter verbose sources/app/api/socket/resilienceHandler.integration.spec.ts`
+- **After every plan wave:** Run `cd apps/server && yarn test && cd ../cli && yarn test`
 - **Before `/gsd-verify-work`:** Full suite must be green
 - **Max feedback latency:** 8 seconds
 
@@ -38,7 +38,10 @@ created: 2026-04-22
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 8-01-01 | 01 | 1 | REQ-{XX} | T-8-01 / — | {expected secure behavior or "N/A"} | unit | `{command}` | ✅ / ❌ W0 | ⬜ pending |
+| 8-01-01 | 01 | 1 | SRVR-01 through SRVR-10 | T-8-01, T-8-02, T-8-03 | Validates `reconnect-resume` and `ack-update` schemas; uses server-derived connectionKey | tdd (RED gate) | `cd apps/server && yarn vitest --reporter verbose sources/app/api/socket/resilienceHandler.integration.spec.ts` | ❌ W0 | ⬜ pending |
+| 8-02-01 | 02 | 2 | SRVR-02, SRVR-03, SRVR-04, SRVR-06, SRVR-08, SRVR-09, SRVR-10 | T-8-01, T-8-02, T-8-03, T-8-05 | connectionKey derived from JWT userId; schema validation rejects malformed payloads | integration (GREEN gate) | `cd apps/server && yarn vitest --reporter verbose sources/app/api/socket/resilienceHandler.integration.spec.ts` | ❌ W0 | ⬜ pending |
+| 8-02-02 | 02 | 2 | SRVR-01 | T-8-06 | writeToBuffer called with user-scoped key; fire-and-forget never blocks emitUpdate | integration (GREEN gate) | `cd apps/server && yarn vitest --reporter verbose sources/app/api/socket/resilienceHandler.integration.spec.ts 2>&1 \| grep -E "SRVR-01\|PASS\|FAIL"` | ❌ W0 | ⬜ pending |
+| 8-02-03 | 02 | 2 | SRVR-07 | — | N/A — existing CLI test unchanged | unit (existing) | `cd apps/cli && yarn test` | ✅ existing | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -46,31 +49,25 @@ created: 2026-04-22
 
 ## Wave 0 Requirements
 
-- [ ] `{tests/test_file.py}` — stubs for REQ-{XX}
-- [ ] `{tests/conftest.py}` — shared fixtures
-- [ ] `{framework install}` — if no framework detected
-
-*If none: "Existing infrastructure covers all phase requirements."*
+- [ ] `apps/server/sources/app/api/socket/resilienceHandler.integration.spec.ts` — RED test suite covering SRVR-01 through SRVR-10 (created by Plan 01 Task 1)
+- [ ] No framework install needed — vitest already configured in `apps/server/vitest.config.ts`
+- [ ] No fixtures needed — `createDbMocks`, `createFakeSocket`, `triggerSocketHandler` already in `apps/server/sources/app/api/testkit/`
 
 ---
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| {behavior} | REQ-{XX} | {reason} | {steps} |
-
-*If none: "All phase behaviors have automated verification."*
+*All phase behaviors have automated verification.*
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 8s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (resilienceHandler.integration.spec.ts)
+- [x] No watch-mode flags
+- [x] Feedback latency < 8s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** {pending / approved YYYY-MM-DD}
+**Approval:** pending

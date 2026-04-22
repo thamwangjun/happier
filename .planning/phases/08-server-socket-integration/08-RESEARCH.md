@@ -451,22 +451,22 @@ The `writeToBuffer` call is placed after `this.emit(...)` completes. Because `em
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Wire event for `retentionStart` delivery before replay**
    - What we know: SRVR-10 requires `retentionStart` to arrive before replay messages. `replay-complete` arrives after.
    - What is unclear: Is there a dedicated event (e.g., `replay-start`) or should `retentionStart` be sent as an initial `socket.emit` call before the replay loop?
-   - Recommendation: Use a simple inline emission `socket.emit('replay-start', { retentionStart })` before the loop, emitted even when buffer is empty. Then `replay-complete` closes the gate. This gives Phase 9 a clean hook. If a simpler approach is needed, attach `retentionStart` as a field on `replay-complete` AND emit it inline — the client reads whichever arrives first.
+   - RESOLVED: Use a separate `socket.emit('replay-start', { retentionStart })` before the replay loop. Implementation in Plan 02 Task 1 confirms this wire format. `replay-complete` closes the gate at the end of all paths.
 
 2. **Overflow detection without a persisted overflow flag**
    - What we know: `writeToBuffer` returns `{ overflow }` at write time; `readBuffer` does not surface this.
    - What is unclear: Is there an `overflowed` column in `ClientAckState` or `UnackedMessage` from Phase 7 schema?
-   - Recommendation: Use gap detection (see Pitfall 3). If `retentionStart > lastAckedSeq + 1`, emit `SOCKET_RESILIENCE_EVENTS.BUFFER_OVERFLOW` before replay. This is algebraically correct and requires no schema change.
+   - RESOLVED: Use gap detection (Pitfall 3). If `retentionStart > lastAckedSeq + 1`, emit `SOCKET_RESILIENCE_EVENTS.BUFFER_OVERFLOW` before replay. No `overflowed` column exists in Phase 7 schema; algebraic gap detection is correct and requires no schema change.
 
 3. **Integration test DB setup for `readBuffer`**
    - What we know: Integration tests mock the DB via `vi.mock` and `createDbMocks`. `readBuffer` calls `db.unackedMessage.findMany`.
    - What is unclear: Whether `inTx` (used only by `writeToBuffer`) needs the transaction mock in the reconnect-resume integration test.
-   - Recommendation: The `reconnect-resume` test calls `readBuffer` (no transaction) and `ackBuffer` (no transaction); only `writeToBuffer` uses `inTx`. Tests for SRVR-01 (fire-and-forget write) must use `createDbTransactionMock` per the `unackedBuffer.spec.ts` pattern. Tests for SRVR-02/SRVR-03 do not need transaction mocking.
+   - RESOLVED: Only `writeToBuffer` uses `inTx`; `readBuffer` and `ackBuffer` do not use transactions. SRVR-01 tests use `createDbTransactionMock`; SRVR-02/SRVR-03 tests use plain `createDbMocks` without the transaction wrapper. Plan 01 Task 1 implements this separation.
 
 ---
 
