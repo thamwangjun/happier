@@ -27,21 +27,21 @@ describe('sessionAgentToolsSettings', () => {
     });
 
     it('returns default when sessionAgentToolsSettingsV1 key is absent', async () => {
-        const { readSessionAgentToolsSettingsV1, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({} as any);
+        const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({} as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
         expect(result).toEqual({ v: 1, tools: {} });
     });
 
     it('returns default when sessionAgentToolsSettingsV1 is undefined', async () => {
-        const { readSessionAgentToolsSettingsV1, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({ sessionAgentToolsSettingsV1: undefined } as any);
+        const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettingsV1: undefined } as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
     });
 
     it('parses a valid blob with enabled=false for a named tool', async () => {
-        const { readSessionAgentToolsSettingsV1 } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({
+        const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({
             sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
         } as any);
         expect(result.v).toBe(1);
@@ -49,8 +49,8 @@ describe('sessionAgentToolsSettings', () => {
     });
 
     it('parses a blob missing the v field (v defaults to 1)', async () => {
-        const { readSessionAgentToolsSettingsV1 } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({
+        const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({
             sessionAgentToolsSettingsV1: { tools: { change_title: { enabled: true } } },
         } as any);
         expect(result.v).toBe(1);
@@ -58,8 +58,8 @@ describe('sessionAgentToolsSettings', () => {
     });
 
     it('parses a blob with unknown top-level keys (forward-compat)', async () => {
-        const { readSessionAgentToolsSettingsV1 } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({
+        const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({
             sessionAgentToolsSettingsV1: { v: 1, tools: {}, future_key: true },
         } as any);
         expect(result.v).toBe(1);
@@ -70,8 +70,8 @@ describe('sessionAgentToolsSettings', () => {
         const { logger } = await import('@/ui/logger');
         const warnSpy = vi.mocked(logger.warn);
         warnSpy.mockClear();
-        const { readSessionAgentToolsSettingsV1, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({ sessionAgentToolsSettingsV1: { v: 2 } } as any);
+        const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettingsV1: { v: 2 } } as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
         expect(warnSpy).toHaveBeenCalledOnce();
         expect(warnSpy.mock.calls[0]?.[0]).toMatch(/sessionAgentToolsSettings/);
@@ -81,15 +81,15 @@ describe('sessionAgentToolsSettings', () => {
         const { logger } = await import('@/ui/logger');
         const warnSpy = vi.mocked(logger.warn);
         warnSpy.mockClear();
-        const { readSessionAgentToolsSettingsV1, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({ sessionAgentToolsSettingsV1: { v: 1, tools: 'bad' } } as any);
+        const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettingsV1: { v: 1, tools: 'bad' } } as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
         expect(warnSpy).toHaveBeenCalledOnce();
     });
 
     it('absent tool name in tools map is undefined — opt-out model (SCHEMA-02)', async () => {
-        const { readSessionAgentToolsSettingsV1 } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettingsV1({
+        const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
+        const result = readSessionAgentToolsSettings({
             sessionAgentToolsSettingsV1: { v: 1, tools: {} },
         } as any);
         expect(result.tools['change_title']).toBeUndefined();
@@ -100,37 +100,96 @@ describe('sessionAgentToolsSettings', () => {
         const { logger } = await import('@/ui/logger');
         const warnSpy = vi.mocked(logger.warn);
         warnSpy.mockClear();
-        const { readSessionAgentToolsSettingsV1 } = await import('./sessionAgentToolsSettings');
-        readSessionAgentToolsSettingsV1({} as any);
+        const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
+        readSessionAgentToolsSettings({} as any);
         expect(warnSpy).not.toHaveBeenCalled();
     });
 
     describe('buildIsSessionAgentToolEnabled', () => {
         it('returns true for a tool absent from the tools map (opt-out model, SCHEMA-02)', async () => {
-            const { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled } =
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
-            const settings = readSessionAgentToolsSettingsV1({} as any);
+            const settings = readSessionAgentToolsSettings({} as any);
             const predicate = buildIsSessionAgentToolEnabled(settings);
             expect(predicate('change_title')).toBe(true);
             expect(predicate('any_absent_tool')).toBe(true);
         });
 
         it('returns true when enabled === true', async () => {
-            const { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled } =
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
-            const settings = readSessionAgentToolsSettingsV1({
+            const settings = readSessionAgentToolsSettings({
                 sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: true } } },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(true);
         });
 
         it('returns false when enabled === false', async () => {
-            const { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled } =
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
-            const settings = readSessionAgentToolsSettingsV1({
+            const settings = readSessionAgentToolsSettings({
                 sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(false);
+        });
+
+        it('returns true for absent tool when default is true (SCHEMA-01)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: true },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(true);
+        });
+
+        it('returns false for absent tool when default is false — opt-in mode (SCHEMA-02)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: false },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(false);
+        });
+
+        it('returns true for absent tool when default is omitted — backward compat (SCHEMA-03)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: {} },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(true);
+        });
+
+        it('per-tool enabled:true overrides default:false (SCHEMA-04)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: true } }, default: false },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(true);
+        });
+
+        it('per-tool enabled:false overrides default:true (SCHEMA-04)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } }, default: true },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(false);
+        });
+
+        it('returns DEFAULT and warns when default field is non-boolean — no throw (VALID-01)', async () => {
+            const { logger } = await import('@/ui/logger');
+            const warnSpy = vi.mocked(logger.warn);
+            warnSpy.mockClear();
+            const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: 'bad' },
+            } as any);
+            expect(settings).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
+            expect(warnSpy).toHaveBeenCalledOnce();
+            expect(buildIsSessionAgentToolEnabled(settings)('any_tool')).toBe(true);
         });
     });
 

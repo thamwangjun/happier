@@ -9,7 +9,7 @@ import type { Metadata } from "@/api/types";
 import { configuration } from "@/configuration";
 import type { Credentials } from '@/persistence';
 import { readSettings } from '@/persistence';
-import { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled, findUnknownSessionAgentToolNames } from '@/settings/sessionAgentToolsSettings';
+import { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled, findUnknownSessionAgentToolNames } from '@/settings/sessionAgentToolsSettings';
 import type { ExecutionRunServiceResult } from "@/session/services/executionRuns";
 
 export type HappyMcpExecutionRunService = Readonly<{
@@ -37,7 +37,7 @@ export async function startHappyServer(
 ) {
     // Read settings once at startup (STARTUP-01); predicate is computed here and reused per-request.
     const settings = await readSettings();
-    const toolsSettings = readSessionAgentToolsSettingsV1(settings);
+    const toolsSettings = readSessionAgentToolsSettings(settings);
     const isSessionAgentToolEnabled = buildIsSessionAgentToolEnabled(toolsSettings);
 
     // Warn on unknown tool names at startup (VALID-01). Uses unfiltered catalog so that
