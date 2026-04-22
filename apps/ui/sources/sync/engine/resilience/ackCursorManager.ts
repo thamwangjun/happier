@@ -10,10 +10,22 @@ export function createAckFlushState(): AckFlushState {
 }
 
 export function scheduleAckUpdateFlush(state: AckFlushState, emit: () => void): void {
-    void ACK_DEBOUNCE_MS; // imported — used in GREEN phase
-    throw new Error('not implemented');
+    state.dirty = true;
+    if (state.timer) return;
+    state.timer = setTimeout(() => {
+        state.timer = null;
+        if (!state.dirty) return;
+        state.dirty = false;
+        emit();
+    }, ACK_DEBOUNCE_MS);
 }
 
 export function flushAckUpdateNow(state: AckFlushState, emit: () => void): void {
-    throw new Error('not implemented');
+    if (state.timer) {
+        clearTimeout(state.timer);
+        state.timer = null;
+    }
+    if (!state.dirty) return;
+    state.dirty = false;
+    emit();
 }

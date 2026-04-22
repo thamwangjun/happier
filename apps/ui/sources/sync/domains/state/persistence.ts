@@ -908,3 +908,45 @@ export function clearPersistence() {
     const mmkv = getPersistenceStorage();
     mmkv.clearAll();
 }
+
+function lastAckedSeqByAccountIdKey(): string {
+    return 'resilience-last-acked-seq-v1';
+}
+
+export function loadLastAckedSeq(accountId: string): number {
+    const mmkv = getPersistenceStorage();
+    const raw = mmkv.getString(lastAckedSeqByAccountIdKey());
+    if (raw === undefined) return 0;
+    try {
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return 0;
+        const value = (parsed as Record<string, unknown>)[accountId];
+        if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+            return Math.floor(value);
+        }
+        return 0;
+    } catch (e) {
+        return 0;
+    }
+}
+
+export function saveLastAckedSeq(accountId: string, seq: number): void {
+    const mmkv = getPersistenceStorage();
+    const raw = mmkv.getString(lastAckedSeqByAccountIdKey());
+    let existing: Record<string, number> = {};
+    if (raw !== undefined) {
+        try {
+            const parsed: unknown = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                for (const [key, val] of Object.entries(parsed as Record<string, unknown>)) {
+                    if (typeof val === 'number' && Number.isFinite(val) && val >= 0) {
+                        existing[key] = Math.floor(val);
+                    }
+                }
+            }
+        } catch (e) {
+            existing = {};
+        }
+    }
+    mmkv.set(lastAckedSeqByAccountIdKey(), JSON.stringify({ ...existing, [accountId]: Math.floor(seq) }));
+}
