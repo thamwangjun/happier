@@ -183,7 +183,9 @@ describe("SRVR-01: emitUpdate() writes to buffer fire-and-forget", async () => {
     // Dynamic import connectionEventRouter AFTER mocks — tests that emitUpdate calls writeToBuffer.
     // NOTE: This imports the module at '@/app/events/connectionEventRouter' which Plan 02 creates.
     // Until then, this describe block fails with module-not-found (RED gate).
-    const { connectionEventRouter } = await import("@/app/events/connectionEventRouter");
+    // vi.importActual bypasses the top-level vi.mock so we get the real implementation,
+    // while @/app/resilience/unackedBuffer remains mocked — allowing writeToBuffer assertions.
+    const { connectionEventRouter } = await vi.importActual<typeof import("@/app/events/connectionEventRouter")>("@/app/events/connectionEventRouter");
 
     beforeEach(() => {
         vi.clearAllMocks();
