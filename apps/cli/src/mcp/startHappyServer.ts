@@ -107,7 +107,7 @@ export async function startHappyServer(
             }
 
             try {
-                await Promise.resolve(mcp.close());
+                await mcp.close();
             } catch (error) {
                 logger.debug('[happierMCP] Error closing server:', error);
             }
