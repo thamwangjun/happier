@@ -14,6 +14,7 @@ import { machineUpdateHandler } from "./socket/machineUpdateHandler";
 import { machineTransferHandler } from "./socket/machineTransferHandler";
 import { artifactUpdateHandler } from "./socket/artifactUpdateHandler";
 import { accessKeyHandler } from "./socket/accessKeyHandler";
+import { resilienceHandler } from "./socket/resilienceHandler";
 import { createServerRpcForwarder } from "./socket/serverRpcForwarder";
 import { getSocketRooms } from "./socketRooms";
 import { createAdapter } from "@socket.io/redis-streams-adapter";
@@ -315,6 +316,13 @@ export function startSocket(app: Fastify) {
         });
         artifactUpdateHandler(userId, socket);
         accessKeyHandler(userId, socket);
+        // Register resilience handler only for user-scoped connections (D-05, STORE-07).
+        // session-scoped and machine-scoped sockets are not buffered.
+        // Undefined clientType defaults to user-scoped (per PATTERNS.md) — include the
+        // !metadata.clientType guard to avoid skipping handler registration for those connections.
+        if (!metadata.clientType || metadata.clientType === 'user-scoped') {
+            resilienceHandler(userId, socket);
+        }
 
         // Ready
         log(
