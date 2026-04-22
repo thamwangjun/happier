@@ -45,10 +45,14 @@ Plans:
 **Goal**: The predicate's lookup order is verified by passing unit tests across all three scenarios, and users can read a worked example of the `default: false` opt-in pattern in the docs
 **Depends on**: Phase 4
 **Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, DOCS-01
+**Plans**: 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md — Add 3-level lookup describe block (TEST-01..04) and update docs/mcp-tool-filtering.md (Example E + stale Part 2 fixes)
+
 **Success Criteria** (what must be TRUE):
   1. All four predicate unit tests pass: backward-compat (no default key), default-false disables unset tools, per-tool enabled:true overrides default:false, per-tool enabled:false overrides default:true
   2. `docs/mcp-tool-filtering.md` contains a `default: false` example configuration with per-tool overrides that a user can copy directly into their settings file
-**Plans**: TBD
 
 ## Progress
 
@@ -58,4 +62,4 @@ Plans:
 | 2. Startup Wiring & Tool Filtering | v1.0 | 3/3 | Complete | 2026-04-19 |
 | 3. Validation Feedback | v1.0 | 1/1 | Complete | 2026-04-19 |
 | 4. Schema & Predicate | v1.1 | 1/1 | Complete | 2026-04-22 |
-| 5. Tests & Docs | v1.1 | 0/TBD | Not started | - |
+| 5. Tests & Docs | v1.1 | 0/1 | Not started | - |
