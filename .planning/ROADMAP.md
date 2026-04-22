@@ -109,7 +109,12 @@ Plans:
   7. When the server signals `buffer-overflow`, the client immediately triggers `resumeViaChanges` and skips socket replay for that reconnect cycle — the gap is closed via the HTTP catch-up path, not retried via socket
   8. When `retentionStart` from the server exceeds `lastAckedSeq + 1`, the client proactively triggers `resumeViaChanges` without waiting for a gap event — it detects the non-contiguous buffer and acts before any messages are applied
   9. If both `buffer-overflow` and gap detection fire in the same reconnect cycle, exactly one `resumeViaChanges` call completes — the second trigger is a no-op until the first finishes
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — TDD RED: write all failing tests for MOB-01 through MOB-10 in engine/resilience/*.spec.ts with stubs
+- [ ] 09-02-PLAN.md — TDD GREEN core: implement dedupFilter.ts, ackCursorManager.ts, replayGate.ts and extend persistence.ts with loadLastAckedSeq/saveLastAckedSeq
+- [ ] 09-03-PLAN.md — TDD GREEN integration: wire resilience module into apiSocket.ts, sync.ts, and pendingQueueV2.ts; full suite GREEN
 
 ---
 
