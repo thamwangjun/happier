@@ -144,7 +144,7 @@ const defaultSettings: Settings = {
  * Migrate settings from old schema versions to current
  * Always backwards compatible - preserves all data
  */
-function migrateSettings(raw: any, fromVersion: number): any {
+function migrateSettings(raw: Record<string, unknown>, fromVersion: number): Record<string, unknown> {
   let migrated = { ...raw };
 
   // Migration from v2 to v3 (removed CLI-local env cache)
