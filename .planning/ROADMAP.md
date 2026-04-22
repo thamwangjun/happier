@@ -21,7 +21,7 @@
 **Milestone Goal:** Add a `default?: boolean` field to `sessionAgentToolsSettingsV1` so developers can set a baseline enabled/disabled state for all tools not individually configured.
 
 - [x] **Phase 4: Schema & Predicate** - Extend the settings schema and predicate to support a global default field — completed 2026-04-22
-- [ ] **Phase 5: Tests & Docs** - Verify all lookup scenarios with unit tests and document the opt-in pattern
+- [x] **Phase 5: Tests & Docs** - Verify all lookup scenarios with unit tests and document the opt-in pattern (2026-04-22)
 
 ## Phase Details
 
@@ -48,7 +48,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md — Add 3-level lookup describe block (TEST-01..04) and update docs/mcp-tool-filtering.md (Example E + stale Part 2 fixes)
+- [x] 05-01-PLAN.md — Add 3-level lookup describe block (TEST-01..04) and update docs/mcp-tool-filtering.md (Example E + stale Part 2 fixes)
 
 **Success Criteria** (what must be TRUE):
   1. All four predicate unit tests pass: backward-compat (no default key), default-false disables unset tools, per-tool enabled:true overrides default:false, per-tool enabled:false overrides default:true
@@ -62,5 +62,4 @@ Plans:
 | 2. Startup Wiring & Tool Filtering | v1.0 | 3/3 | Complete | 2026-04-19 |
 | 3. Validation Feedback | v1.0 | 1/1 | Complete | 2026-04-19 |
 | 4. Schema & Predicate | v1.1 | 1/1 | Complete | 2026-04-22 |
-| 5. Tests & Docs | v1.1 | 0/1 | Ready to execute | - |
-| 5. Tests & Docs | v1.1 | 0/1 | Not started | - |
+| 5. Tests & Docs | v1.1 | 1/1 | Complete | 2026-04-22 |
