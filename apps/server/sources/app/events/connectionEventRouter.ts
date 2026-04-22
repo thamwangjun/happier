@@ -62,14 +62,22 @@ class EventRouter {
             skipSenderConnection: params.skipSenderConnection
         });
         // Fire-and-forget buffer write (SRVR-01, D-04).
+        // Only buffer when the filter delivers to user-scoped connections; callers using
+        // machine-only filters must not accumulate messages in the user-scoped reconnect buffer.
         // Promise.resolve() is used (not void) so the catch handler receives the rejection.
-        // writeToBuffer's own CLI exclusion guard (connectionKey.startsWith('user-scoped:'))
-        // ensures machine-scoped and session-scoped connections are never buffered (STORE-07).
-        Promise.resolve(
-            writeToBuffer(params.userId, `user-scoped:${params.userId}`, params.payload)
-        ).catch((err) =>
-            log({ module: 'resilience', level: 'warn' }, `writeToBuffer failed for user ${params.userId}: ${err}`)
-        );
+        const filterIncludesUserScoped =
+            !params.recipientFilter ||
+            params.recipientFilter.type === 'all-user-authenticated-connections' ||
+            params.recipientFilter.type === 'all-interested-in-session' ||
+            params.recipientFilter.type === 'user-scoped-only';
+
+        if (filterIncludesUserScoped) {
+            Promise.resolve(
+                writeToBuffer(params.userId, `user-scoped:${params.userId}`, params.payload)
+            ).catch((err) =>
+                log({ module: 'resilience', level: 'warn' }, `writeToBuffer failed for user ${params.userId}: ${err}`)
+            );
+        }
     }
 
     emitEphemeral(params: {
