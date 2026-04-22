@@ -308,12 +308,9 @@ export function buildIsSessionAgentToolEnabled(
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **JSDoc comment on the predicate**
-   - What we know: the current JSDoc says "Returns true for any tool absent from the tools map (opt-out model, SCHEMA-02)"
-   - What is unclear: whether to update it to describe the three-level lookup or leave it as-is
-   - Recommendation: Update the JSDoc to describe the new lookup order — the planner should include this as part of the task
+1. **JSDoc comment on the predicate** — RESOLVED: Updated to describe three-level lookup order ("per-tool entry → global default → true") consistent with D-04 opt-in framing. Task 1 Edit 4 in 04-01-PLAN.md implements this.
 
 ---
 
