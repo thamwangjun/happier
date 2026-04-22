@@ -381,6 +381,29 @@ model SimpleCache {
     updatedAt DateTime @updatedAt
 }
 
+model UnackedMessage {
+    id            String   @id @default(cuid())
+    userId        String
+    connectionKey String
+    seq           Int
+    /// [UpdatePayload]
+    payload       Json
+    createdAt     DateTime @default(now())
+
+    @@index([userId, connectionKey, seq])
+    @@index([createdAt])
+}
+
+model ClientAckState {
+    id            String   @id @default(cuid())
+    userId        String
+    connectionKey String
+    ackedSeq      Int      @default(0)
+    updatedAt     DateTime @updatedAt
+
+    @@unique([userId, connectionKey])
+}
+
 //
 // Usage Reporting
 //
