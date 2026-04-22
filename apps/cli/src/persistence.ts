@@ -432,7 +432,9 @@ export async function updateSettings(
           if (Date.now() - stats.mtimeMs > STALE_LOCK_TIMEOUT_MS) {
             await unlink(lockFile).catch(() => { });
           }
-        } catch { }
+        } catch (err) {
+            logger.debug('[updateSettings] Could not stat lock file during stale-lock check:', err);
+        }
       } else {
         throw err;
       }
