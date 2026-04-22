@@ -5,6 +5,8 @@ export const SOCKET_RESILIENCE_EVENTS = {
     ACK_UPDATE:       'ack-update',
     REPLAY_COMPLETE:  'replay-complete',
     BUFFER_OVERFLOW:  'buffer-overflow',
+    REPLAY_START:     'replay-start',
+    UPDATE:           'update',
 } as const;
 
 export type SocketResilienceEvent = (typeof SOCKET_RESILIENCE_EVENTS)[keyof typeof SOCKET_RESILIENCE_EVENTS];

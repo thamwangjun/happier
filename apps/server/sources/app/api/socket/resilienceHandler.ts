@@ -40,7 +40,7 @@ export function resilienceHandler(userId: string, socket: Socket): void {
 
             // Emit retentionStart BEFORE any replay messages so the client can
             // detect a non-contiguous buffer proactively (SRVR-10).
-            socket.emit('replay-start', { retentionStart });
+            socket.emit(SOCKET_RESILIENCE_EVENTS.REPLAY_START, { retentionStart });
 
             // Gap detection for overflow signal (SRVR-09):
             // If the oldest buffered seq is not contiguous with lastAckedSeq, the
@@ -58,7 +58,7 @@ export function resilienceHandler(userId: string, socket: Socket): void {
             // Replay all buffered messages in seq order (SRVR-02, SRVR-04, SRVR-05).
             // On Path 2 (overflow), messages are still sent — see comment above.
             for (const payload of rows) {
-                socket.emit('update', payload);
+                socket.emit(SOCKET_RESILIENCE_EVENTS.UPDATE, payload);
             }
 
             // Path 1 + Path 2: always close the client gate after replay (SRVR-09)
