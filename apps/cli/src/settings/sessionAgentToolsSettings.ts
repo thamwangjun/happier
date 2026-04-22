@@ -25,7 +25,7 @@ export const SessionAgentToolsSettingsSchema = z.preprocess(
 
 export type SessionAgentToolsSettings = z.infer<typeof SessionAgentToolsSettingsSchema>;
 
-export const DEFAULT_SESSION_AGENT_TOOLS_SETTINGS: SessionAgentToolsSettings = { v: 1, tools: {} };
+export const DEFAULT_SESSION_AGENT_TOOLS_SETTINGS: Readonly<SessionAgentToolsSettings> = Object.freeze({ v: 1 as const, tools: Object.freeze({}) as Record<string, { enabled: boolean }> });
 
 /**
  * Reads and validates the sessionAgentToolsSettingsV1 field from a Settings object.
