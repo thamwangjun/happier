@@ -20,7 +20,7 @@
 
 **Milestone Goal:** Add a `default?: boolean` field to `sessionAgentToolsSettingsV1` so developers can set a baseline enabled/disabled state for all tools not individually configured.
 
-- [ ] **Phase 4: Schema & Predicate** - Extend the settings schema and predicate to support a global default field
+- [x] **Phase 4: Schema & Predicate** - Extend the settings schema and predicate to support a global default field — completed 2026-04-22
 - [ ] **Phase 5: Tests & Docs** - Verify all lookup scenarios with unit tests and document the opt-in pattern
 
 ## Phase Details
@@ -57,5 +57,5 @@ Plans:
 | 1. Schema & Reader | v1.0 | 1/1 | Complete | 2026-04-19 |
 | 2. Startup Wiring & Tool Filtering | v1.0 | 3/3 | Complete | 2026-04-19 |
 | 3. Validation Feedback | v1.0 | 1/1 | Complete | 2026-04-19 |
-| 4. Schema & Predicate | v1.1 | 0/1 | Not started | - |
+| 4. Schema & Predicate | v1.1 | 1/1 | Complete | 2026-04-22 |
 | 5. Tests & Docs | v1.1 | 0/TBD | Not started | - |
