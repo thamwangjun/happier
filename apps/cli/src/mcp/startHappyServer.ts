@@ -131,8 +131,10 @@ export async function startHappyServer(
         }
     });
 
-    const baseUrl = await new Promise<URL>((resolve) => {
+    const baseUrl = await new Promise<URL>((resolve, reject) => {
+        server.once('error', reject);
         server.listen(0, "127.0.0.1", () => {
+            server.removeListener('error', reject);
             const addr = server.address() as AddressInfo;
             resolve(new URL(`http://127.0.0.1:${addr.port}`));
         });
