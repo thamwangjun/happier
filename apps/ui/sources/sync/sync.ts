@@ -40,6 +40,8 @@ import {
     loadChangesCursor,
     saveChangesCursor,
     loadProfile as loadPersistedProfile,
+    loadLastAckedSeq,
+    saveLastAckedSeq,
 } from './domains/state/persistence';
 import {
     clearWarmCacheAccountScope,
@@ -198,6 +200,9 @@ import {
     handleSocketUpdate,
     parseUpdateContainer,
 } from './engine/socket/socket';
+import { SOCKET_RESILIENCE_EVENTS } from '@happier-dev/protocol';
+import { createReplayGate, type ReplayGate } from '@/sync/engine/resilience/replayGate';
+import { createAckFlushState, flushAckUpdateNow, type AckFlushState } from '@/sync/engine/resilience/ackCursorManager';
 
 const SESSION_MESSAGES_PAGE_SIZE = 150;
 
@@ -313,6 +318,11 @@ class Sync {
 	      private changesCursorDirty = false;
 	      private lastSocketDisconnectedAtMs: number | null = null;
 	      private lastSocketOfflineDurationMs: number | null = null;
+    public replayGate: ReplayGate = createReplayGate();
+    private ackFlushState: AckFlushState = createAckFlushState();
+    private lastAckedSeq: number = 0;
+    private resumeViaChangesInFlight: Promise<'ok' | 'fallback'> | null = null;
+    private replayCompleteWaiters: Array<() => void> = [];
 	      revenueCatInitialized = false;
 	    private settingsSecretsKey: Uint8Array | null = null;
 	    private settingsSecretsReadKeys: readonly Uint8Array[] = [];
@@ -395,6 +405,8 @@ class Sync {
                       // ignore
                   }
                   fireAndForget(invalidateAllServerReachabilitySupervisors(), { tag: 'Sync.invalidateAllServerReachabilitySupervisors' });
+                  // MOB-06: force fresh disconnect+connect regardless of socket.connected state
+                  try { apiSocket.disconnect(); } catch { /* ignore */ }
                   try {
                       apiSocket.connect();
                   } catch {
@@ -432,6 +444,19 @@ class Sync {
                   // Reliability: flush changes cursor immediately too (avoid losing catch-up position).
                   try {
                       this.flushChangesCursorNow();
+                  } catch {
+                      // ignore
+                  }
+                  // MOB-05: flush ack-update synchronously and persist lastAckedSeq before iOS kills the socket.
+                  try {
+                      const accountId = storage.getState().profile?.id ?? '';
+                      flushAckUpdateNow(this.ackFlushState, () => {
+                          apiSocket.send(SOCKET_RESILIENCE_EVENTS.ACK_UPDATE, {
+                              sessionId: '',
+                              seq: this.lastAckedSeq,
+                          });
+                      });
+                      saveLastAckedSeq(accountId, this.lastAckedSeq);
                   } catch {
                       // ignore
                   }
@@ -3303,7 +3328,37 @@ class Sync {
 
           // Subscribe to connection state changes
           apiSocket.onReconnected(() => {
+              // MOB-D-02: set replay gate before resumeSync so pendingQueueV2 holds commits during replay
+              this.replayGate.isReplaying = true;
               fireAndForget(this.resumeSync('socket-reconnect'), { tag: 'Sync.resumeSync.socket-reconnect' });
+              // MOB-01: emit reconnect-resume with persisted lastAckedSeq so server replays buffered messages
+              const accountId = storage.getState().profile?.id ?? '';
+              this.lastAckedSeq = loadLastAckedSeq(accountId);
+              apiSocket.send(SOCKET_RESILIENCE_EVENTS.RECONNECT_RESUME, {
+                  sessionId: '',
+                  lastAckedSeq: this.lastAckedSeq,
+              });
+          });
+
+          // MOB-09: proactive gap detection — replay-start fires before server sends buffered messages
+          apiSocket.onMessage(SOCKET_RESILIENCE_EVENTS.REPLAY_START, (payload: { retentionStart: number | null }) => {
+              const accountId = storage.getState().profile?.id ?? '';
+              if (payload?.retentionStart !== null && typeof payload?.retentionStart === 'number' && payload.retentionStart > this.lastAckedSeq + 1) {
+                  fireAndForget(this.resumeViaChangesDeduped({ accountId }), { tag: 'Sync.gap-detection.resumeViaChanges' });
+              }
+          });
+
+          // MOB-08: buffer-overflow signals that the server buffer was trimmed; fall back to resumeViaChanges
+          apiSocket.onMessage(SOCKET_RESILIENCE_EVENTS.BUFFER_OVERFLOW, () => {
+              const accountId = storage.getState().profile?.id ?? '';
+              fireAndForget(this.resumeViaChangesDeduped({ accountId }), { tag: 'Sync.buffer-overflow.resumeViaChanges' });
+          });
+
+          // MOB-07: replay-complete clears the replay gate and drains any pending commit waiters
+          apiSocket.onMessage(SOCKET_RESILIENCE_EVENTS.REPLAY_COMPLETE, () => {
+              this.replayGate.isReplaying = false;
+              this.resumeViaChangesInFlight = null; // reset for next reconnect cycle
+              this.drainReplayCompleteWaiters();
           });
       }
 
@@ -3421,6 +3476,32 @@ class Sync {
 
           return 'ok';
       }
+
+    private resumeViaChangesDeduped(opts: { accountId: string }): Promise<'ok' | 'fallback'> {
+        return runWithInFlightDedupe(
+            {
+                get: () => this.resumeViaChangesInFlight,
+                set: (v) => { this.resumeViaChangesInFlight = v; },
+            },
+            () => this.resumeViaChanges(opts),
+        );
+    }
+
+    public waitForReplayComplete(): Promise<void> {
+        if (!this.replayGate.isReplaying) {
+            return Promise.resolve();
+        }
+        return new Promise((resolve) => {
+            this.replayCompleteWaiters.push(resolve);
+        });
+    }
+
+    private drainReplayCompleteWaiters(): void {
+        for (const resolve of this.replayCompleteWaiters) {
+            resolve();
+        }
+        this.replayCompleteWaiters = [];
+    }
 
     private handleUpdate = async (update: unknown) => {
           await handleSocketUpdate({
