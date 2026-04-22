@@ -47,6 +47,51 @@
 
 ---
 
+## Milestone: v1.1 — Session Agent Tools — Global Default
+
+**Shipped:** 2026-04-22
+**Phases:** 2 (4-5) | **Plans:** 2 | **Timeline:** 1 day (2026-04-22)
+
+### What Was Built
+
+- `default?: boolean` field in `SessionAgentToolsSettingsSchema` using `z.boolean().optional()` — absence distinguishable from explicit `false`
+- 3-level predicate lookup in `buildIsSessionAgentToolEnabled`: per-tool entry → `settings.default` → `true` fallback
+- Renamed all V1-suffixed TypeScript identifiers (JSON key `sessionAgentToolsSettingsV1` preserved for backward compat)
+- `describe('3-level lookup (TEST-01..04)')` block: 4 requirement-labeled tests; total suite 26 passing
+- `docs/mcp-tool-filtering.md`: schema table `default` row, Example E opt-in mode config, corrected stale V1 references
+
+### What Worked
+
+- **`z.boolean().optional()` without `.default()`** — correct upfront; absence-distinguishability is exactly what the predicate needs
+- **Sibling describe block for TEST-01..04** — explicit requirement-ID traceability without restructuring 21 existing tests
+- **Nyquist validation pass** — caught IN-01..03 (dead test scaffolding, duplicate describe block, missing staleness note)
+- **Small focused scope** — 2 phases, 2 plans, 1 day; near-zero deviation from plan
+
+### What Was Inefficient
+
+- **Worktree node_modules symlink issue (repeated from v1.0)** — executor worktree lacked `node_modules`; requires manual symlinks before tests run. Should be automated or documented as a prerequisite.
+- **HUMAN-UAT.md left with open items at milestone start** — required extra resolution step before archiving.
+
+### Patterns Established
+
+- **`z.boolean().optional()` for 3-state config fields** — use optional without `.default()` when "unset / true / false" semantics are needed; `.default()` collapses absence
+- **`?? true` fallback in opt-out predicates** — null-coalescing to `true` is the idiomatic opt-out pattern
+- **Requirement-labeled test blocks** — `describe('3-level lookup (TEST-01..04)')` creates direct spec-to-test traceability
+
+### Key Lessons
+
+1. Worktree executor lacks `node_modules` — symlink fix should be automated or in CLAUDE.md
+2. Nyquist validation is proportionally more valuable on small-scope changes; always run it
+3. Requirement-labeled describe blocks are low overhead and high traceability value
+
+### Cost Observations
+
+- Sessions: ~3 sessions
+- Commits: ~25 total
+- Notable: 32 files changed but only 2 source files; planning artifacts dominate changeset
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -54,14 +99,18 @@
 | Milestone | Phases | Plans | Key Change |
 |-----------|--------|-------|------------|
 | v1.0 | 3 | 5 | First milestone on this fork; established settings schema + startup wiring patterns |
+| v1.1 | 2 | 2 | Incremental feature; validated Nyquist + requirement-labeled test patterns |
 
 ### Cumulative Quality
 
 | Milestone | Tests Added | Key Coverage |
 |-----------|-------------|--------------|
 | v1.0 | ~16 (unit + integration) | `sessionAgentToolsSettings.ts`, `startHappyServer` tool filtering |
+| v1.1 | +10 (4 new 3-level lookup + 6 schema tests, Nyquist) | 3-level predicate, `default` field, backward compat |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Keep traceability artifacts (REQUIREMENTS.md, ROADMAP.md) in sync during execution, not just at milestone close
 2. Pure functions + call-site IO is the right separation for validation + logging patterns
+3. Worktree executor reliably lacks `node_modules` — symlink workaround needed for CLI test runs; automate or document
+4. Nyquist validation catches real issues even for small scopes; always run it

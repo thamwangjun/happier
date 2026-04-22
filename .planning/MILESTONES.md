@@ -15,3 +15,23 @@
 **Archive:** `.planning/milestones/v1.0-ROADMAP.md`, `.planning/milestones/v1.0-REQUIREMENTS.md`
 
 ---
+
+## v1.1 Session Agent Tools — Global Default (Shipped: 2026-04-22)
+
+**Phases completed:** 2 phases (4-5), 2 plans
+**Requirements:** 10/10 completed ✅
+**Timeline:** 1 day (2026-04-22)
+**Files changed:** 32 files, 3,795 insertions, 120 deletions
+
+**Key accomplishments:**
+
+- Extended `SessionAgentToolsSettingsSchema` with `default?: boolean` field using `z.boolean().optional()` — absence distinguishable from explicit `false` at predicate level (Phase 4)
+- Updated `buildIsSessionAgentToolEnabled` to 3-level lookup: per-tool entry → `settings.default` → `true` fallback; preserves backward-compatible opt-out for all existing users (Phase 4)
+- Renamed all V1-suffixed TypeScript identifiers while preserving JSON key `sessionAgentToolsSettingsV1` for backward compatibility (Phase 4)
+- Added `describe('3-level lookup (TEST-01..04)')` block with 4 explicit requirement-labeled tests; total test suite: 26 passing (Phase 5)
+- Updated `docs/mcp-tool-filtering.md` with schema table `default` row, Example E opt-in mode config, full 3-level predicate implementation, and corrected stale V1 identifier references (Phase 5)
+
+**Tag:** `thamw-1.1b`
+**Archive:** `.planning/milestones/v1.1-ROADMAP.md`, `.planning/milestones/v1.1-REQUIREMENTS.md`
+
+---
