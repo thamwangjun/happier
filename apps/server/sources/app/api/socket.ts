@@ -321,7 +321,7 @@ export function startSocket(app: Fastify) {
         // Undefined clientType defaults to user-scoped (per PATTERNS.md) — include the
         // !metadata.clientType guard to avoid skipping handler registration for those connections.
         if (!metadata.clientType || metadata.clientType === 'user-scoped') {
-            resilienceHandler(userId, socket);
+            resilienceHandler(userId!, socket); // userId narrowed by guard on line 189
         }
 
         // Ready
