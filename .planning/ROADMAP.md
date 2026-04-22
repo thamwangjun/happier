@@ -62,4 +62,5 @@ Plans:
 | 2. Startup Wiring & Tool Filtering | v1.0 | 3/3 | Complete | 2026-04-19 |
 | 3. Validation Feedback | v1.0 | 1/1 | Complete | 2026-04-19 |
 | 4. Schema & Predicate | v1.1 | 1/1 | Complete | 2026-04-22 |
+| 5. Tests & Docs | v1.1 | 0/1 | Ready to execute | - |
 | 5. Tests & Docs | v1.1 | 0/1 | Not started | - |
