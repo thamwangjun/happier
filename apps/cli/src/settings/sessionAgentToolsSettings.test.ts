@@ -1,29 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyEnvValues, restoreEnvValues, snapshotEnvValues } from '@/testkit/env/envSnapshot';
-import { createTempDir, removeTempDir } from '@/testkit/fs/tempDir';
 
 vi.mock('@/ui/logger', () => ({
     logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));
 
 describe('sessionAgentToolsSettings', () => {
-    const envBackup = snapshotEnvValues(['HAPPIER_HOME_DIR', 'HAPPIER_SERVER_URL', 'HAPPIER_WEBAPP_URL']);
-    let homeDir: string | undefined;
-
     beforeEach(async () => {
-        homeDir = await createTempDir('happier-session-agent-tools-settings-');
-        applyEnvValues({
-            HAPPIER_HOME_DIR: homeDir,
-            HAPPIER_SERVER_URL: 'https://api.example.test',
-            HAPPIER_WEBAPP_URL: 'https://app.example.test',
-        });
         vi.resetModules();
     });
 
-    afterEach(async () => {
-        restoreEnvValues(envBackup);
+    afterEach(() => {
         vi.resetModules();
-        if (homeDir) await removeTempDir(homeDir);
     });
 
     it('returns default when sessionAgentToolsSettingsV1 key is absent', async () => {
