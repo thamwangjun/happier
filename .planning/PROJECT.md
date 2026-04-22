@@ -128,7 +128,7 @@ A developer can start an AI coding session on their machine and seamlessly conti
 
 ### Active
 
-- Phase 5: Tests & Docs — next
+- Phase 5: Tests & Docs — complete (2026-04-22)
 
 ### Recently Validated
 
@@ -199,4 +199,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 — Phase 4 complete (Schema & Predicate), Phase 5 (Tests & Docs) next*
+*Last updated: 2026-04-22 — Phase 5 complete (Tests & Docs). Milestone v1.1 fully executed.*
