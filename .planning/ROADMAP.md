@@ -90,8 +90,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — TDD RED: write all failing integration tests for SRVR-01 through SRVR-10 in resilienceHandler.integration.spec.ts
-- [ ] 08-02-PLAN.md — TDD GREEN: implement resilienceHandler.ts, wire emitUpdate() buffer write, register in socket.ts, confirm SRVR-07 regression gate
+- [x] 08-01-PLAN.md — TDD RED: write all failing integration tests for SRVR-01 through SRVR-10 in resilienceHandler.integration.spec.ts
+- [x] 08-02-PLAN.md — TDD GREEN: implement resilienceHandler.ts, wire emitUpdate() buffer write, register in socket.ts, confirm SRVR-07 regression gate
 
 ---
 
