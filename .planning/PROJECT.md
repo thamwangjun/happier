@@ -128,7 +128,15 @@ A developer can start an AI coding session on their machine and seamlessly conti
 
 ### Active
 
+- Phase 5: Tests & Docs — next
+
 ### Recently Validated
+
+**Global Default (v1.1, Phase 4 — Validated 2026-04-22)**
+- ✓ `default?: boolean` field added to `SessionAgentToolsSettingsSchema` (Zod, optional, no `.default()`)
+- ✓ 3-level predicate: per-tool entry → `settings.default` → `true` fallback
+- ✓ V1 TypeScript identifiers renamed to un-versioned form (JSON key preserved for backward compat)
+- ✓ 21 unit tests pass; tsc --noEmit exits 0
 
 **MCP Tool Configuration (v1.0)**
 - ✓ `sessionAgentToolsSettingsV1` settings schema: per-tool enable/disable in `~/.happier-dev/settings.json`, opt-out model, no-throw reader — v1.0
@@ -191,4 +199,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 — milestone v1.1 started (Session Agent Tools — Global Default)*
+*Last updated: 2026-04-22 — Phase 4 complete (Schema & Predicate), Phase 5 (Tests & Docs) next*
