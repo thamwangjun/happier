@@ -389,7 +389,7 @@ model UnackedMessage {
     payload       Json
     createdAt     DateTime @default(now())
 
-    @@index([userId, connectionKey, seq])
+    @@unique([userId, connectionKey, seq])
     @@index([createdAt(sort: Asc)])
 }
 
