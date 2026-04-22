@@ -113,7 +113,7 @@ export interface Settings {
   /**
    * Per-tool session-agent enable/disable configuration (CLI-local; schema-validated).
    * Parsed/normalized by `settings/sessionAgentToolsSettings.ts`.
-   * Stored as raw JSON — always access via `readSessionAgentToolsSettingsV1(settings)`.
+   * Stored as raw JSON — always access via `readSessionAgentToolsSettings(settings)`.
    */
   sessionAgentToolsSettingsV1?: unknown;
 }
