@@ -40,7 +40,7 @@ Field reference:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `v` | `1` (literal) | Yes | Schema version. Must be `1`. |
+| `v` | `1` (literal) | No (defaults to `1`) | Schema version. Omitting is allowed; the CLI will insert `1` automatically. |
 | `tools` | object | No | Map of tool name → `{ "enabled": boolean }`. An empty object (or omitting the key entirely) enables all tools. |
 | `default` | `boolean` | No | Global enabled/disabled baseline for all unconfigured tools. Omitting this field preserves the default opt-out behaviour (all tools enabled). |
 
