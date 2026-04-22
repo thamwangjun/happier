@@ -31,6 +31,7 @@
 - Added `describe('3-level lookup (TEST-01..04)')` block with 4 explicit requirement-labeled tests; total test suite: 26 passing (Phase 5)
 - Updated `docs/mcp-tool-filtering.md` with schema table `default` row, Example E opt-in mode config, full 3-level predicate implementation, and corrected stale V1 identifier references (Phase 5)
 
+**Tag:** `thamw-1.1b`
 **Archive:** `.planning/milestones/v1.1-ROADMAP.md`, `.planning/milestones/v1.1-REQUIREMENTS.md`
 
 ---
