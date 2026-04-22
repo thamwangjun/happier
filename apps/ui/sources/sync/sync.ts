@@ -1703,6 +1703,7 @@ class Sync {
             fetchArtifactWithBody: (artifactId) => this.fetchArtifactWithBody(artifactId),
             updateArtifact: (artifact) => storage.getState().updateArtifact(artifact),
             request,
+            replayGate: this,
         });
     }
 
@@ -3485,6 +3486,11 @@ class Sync {
             },
             () => this.resumeViaChanges(opts),
         );
+    }
+
+    /** MOB-07 gate interface: true while server replay is in progress */
+    public get isReplaying(): boolean {
+        return this.replayGate.isReplaying;
     }
 
     public waitForReplayComplete(): Promise<void> {

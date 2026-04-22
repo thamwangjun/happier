@@ -283,8 +283,14 @@ export async function enqueuePendingMessageV2(params: {
     fetchArtifactWithBody?: (artifactId: string) => Promise<DecryptedArtifact | null>;
     updateArtifact?: (artifact: DecryptedArtifact) => void;
     request: (path: string, init?: RequestInit) => Promise<Response>;
+    /**
+     * MOB-07: optional replay gate — holds the HTTP POST inside runPendingEnqueueCommitInOrder
+     * until replay-complete fires. The optimistic Zustand update (upsertPendingMessage) runs
+     * BEFORE this callback and is never gated.
+     */
+    replayGate?: { isReplaying: boolean; waitForReplayComplete(): Promise<void> };
 }): Promise<void> {
-    const { sessionId, text, displayText, encryption, request, metaOverrides } = params;
+    const { sessionId, text, displayText, encryption, request, metaOverrides, replayGate } = params;
 
     storage.getState().markSessionOptimisticThinking(sessionId);
 
@@ -336,6 +342,11 @@ export async function enqueuePendingMessageV2(params: {
 
     try {
         await runPendingEnqueueCommitInOrder(sessionId, async () => {
+            // MOB-07: hold server-commit flush during replay without dropping from the promise chain.
+            // waitForReplayComplete() resolves immediately when isReplaying=false, or waits for REPLAY_COMPLETE.
+            if (replayGate?.isReplaying) {
+                await replayGate.waitForReplayComplete();
+            }
             let writeBody: Record<string, unknown>;
             if (sessionEncryptionMode === 'plain') {
                 writeBody = { localId, content: { t: 'plain', v: rawRecord } };
