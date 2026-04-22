@@ -193,6 +193,44 @@ describe('sessionAgentToolsSettings', () => {
         });
     });
 
+    describe('3-level lookup (TEST-01..04)', () => {
+        it('returns true for absent tool when default is absent — backward compat (TEST-01)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: {} },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(true);
+        });
+
+        it('returns false for absent tool when default is false — opt-in mode (TEST-02)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: false },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(false);
+        });
+
+        it('returns true for per-tool enabled:true when default is false — per-tool wins (TEST-03)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: { memory_search: { enabled: true } }, default: false },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('memory_search')).toBe(true);
+        });
+
+        it('returns false for per-tool enabled:false when default is true — per-tool wins (TEST-04)', async () => {
+            const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
+                await import('./sessionAgentToolsSettings');
+            const settings = readSessionAgentToolsSettings({
+                sessionAgentToolsSettingsV1: { v: 1, tools: { memory_search: { enabled: false } }, default: true },
+            } as any);
+            expect(buildIsSessionAgentToolEnabled(settings)('memory_search')).toBe(false);
+        });
+    });
+
     describe('findUnknownSessionAgentToolNames', () => {
         it('returns empty array when all configured names are known', async () => {
             const { findUnknownSessionAgentToolNames } = await import('./sessionAgentToolsSettings');
