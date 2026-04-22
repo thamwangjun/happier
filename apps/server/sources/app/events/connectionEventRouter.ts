@@ -11,6 +11,10 @@ import { writeToBuffer } from "@/app/resilience/unackedBuffer";
 class EventRouter {
     private userConnections = new Map<string, Set<ClientConnection>>();
     private io: Server | null = null;
+    // warnedNoIo is intentionally a persistent flag (one-time warning per process lifetime).
+    // It is not reset between tests by vi.clearAllMocks() — this is acceptable because the
+    // "io not initialized" fallback path is only exercised in tests that construct EventRouter
+    // without calling setIo(), and duplicate warnings in that path are not load-bearing.
     private warnedNoIo = false;
 
     // === CONNECTION MANAGEMENT ===
