@@ -20,6 +20,7 @@ describe('retention/createRetentionRuleRegistry', () => {
             'globalLocks',
             'automationRuns',
             'automationRunEvents',
+            'unackedMessages',
         ]);
     });
 
