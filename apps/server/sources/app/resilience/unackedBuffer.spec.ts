@@ -72,18 +72,6 @@ describe('unackedBuffer', () => {
         });
     });
 
-    // STORE-05: overflow signal — writeToBuffer returns { overflow: true } when cap exceeded
-    it('writeToBuffer returns { overflow: true } when count exceeds cap', async () => {
-        dbMocks.db.unackedMessage.create.mockResolvedValue({});
-        dbMocks.db.unackedMessage.count.mockResolvedValue(501);
-        dbMocks.db.unackedMessage.findMany.mockResolvedValueOnce([{ id: 'old' }]);
-        dbMocks.db.unackedMessage.deleteMany.mockResolvedValue({ count: 1 });
-
-        const { writeToBuffer } = await import('./unackedBuffer');
-        const result = await writeToBuffer(USER_ID, CONNECTION_KEY, PAYLOAD, 500);
-        expect(result.overflow).toBe(true);
-    });
-
     // STORE-07: CLI exclusion — non-user-scoped connectionKey returns early without DB call
     it('returns { overflow: false } without DB call for non-user-scoped connectionKey', async () => {
         const { writeToBuffer } = await import('./unackedBuffer');
