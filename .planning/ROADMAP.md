@@ -32,7 +32,7 @@
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md — Extend schema with default?: boolean and update predicate to 3-level lookup (per-tool → default → true)
+- [x] 04-01-PLAN.md — Extend schema with default?: boolean and update predicate to 3-level lookup (per-tool → default → true)
 
 **Success Criteria** (what must be TRUE):
   1. A settings file with `default: false` causes all tools without a per-tool entry to be disabled (opt-in mode is active)
