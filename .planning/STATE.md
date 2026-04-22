@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Session Agent Tools — Global Default
 status: planning
-stopped_at: Milestone v1.1 started
+stopped_at: Roadmap created — 2 phases defined (4, 5)
 last_updated: "2026-04-22T00:00:00.000Z"
 last_activity: 2026-04-22
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,16 +25,39 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 4 of 5 (Schema & Predicate) — not yet started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-22 — Milestone v1.1 started
+Status: Ready to plan
+Last activity: 2026-04-22 — Roadmap created; 2 phases defined
+
+Progress: [░░░░░░░░░░] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0 (v1.1)
+- Average duration: —
+- Total execution time: —
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
+
+**Recent Trend:** —
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
 ### Decisions
 
 All v1.0 decisions captured in PROJECT.md Key Decisions table.
+
+Recent decisions affecting current work:
+- v1.1: Schema lives in `apps/cli/src/settings/` only (no protocol package change needed)
+- v1.1: Lookup order is per-tool entry → `default` → `true` (backward compatible)
 
 ### Pending Todos
 
@@ -58,3 +81,9 @@ All v1.0 decisions captured in PROJECT.md Key Decisions table.
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | *(none)* | | | |
+
+## Session Continuity
+
+Last session: 2026-04-22
+Stopped at: Roadmap created for v1.1 — Phase 4 ready to plan
+Resume file: None
