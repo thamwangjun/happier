@@ -47,11 +47,16 @@ export function resilienceHandler(userId: string, socket: Socket): void {
             // buffer was trimmed — equivalent to overflow from the client's perspective.
             const hasGap = retentionStart !== null && retentionStart > lastAckedSeq + 1;
             if (hasGap) {
-                // Path 2: signal overflow (SRVR-09); client will trigger resumeViaChanges
+                // Path 2: signal overflow (SRVR-09); client will trigger resumeViaChanges.
+                // INTENTIONAL: we continue to replay all buffered messages even after emitting
+                // buffer-overflow so the client can apply any partial updates it can use while
+                // it fetches the full state via resumeViaChanges. The client must tolerate
+                // receiving update events after buffer-overflow and discard them if it chooses.
                 socket.emit(SOCKET_RESILIENCE_EVENTS.BUFFER_OVERFLOW);
             }
 
-            // Replay all buffered messages in seq order (SRVR-02, SRVR-04, SRVR-05)
+            // Replay all buffered messages in seq order (SRVR-02, SRVR-04, SRVR-05).
+            // On Path 2 (overflow), messages are still sent — see comment above.
             for (const payload of rows) {
                 socket.emit('update', payload);
             }
