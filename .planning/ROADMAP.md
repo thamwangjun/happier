@@ -87,7 +87,11 @@ Plans:
   6. The relay's response to `reconnect-resume` includes `retentionStart` (the oldest seq still in the buffer) before replaying, so a client can detect a non-contiguous buffer and proactively fall back
   7. The existing `sessionClient.startupCatchUpRetry.test.ts` suite passes without modification — the startup catch-up cursor is not mutated by the resilience layer
   8. Re-emitting an `ack-update` for a seq already removed from the buffer produces no error and no duplicate discard attempt — the server is idempotent on acks
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — TDD RED: write all failing integration tests for SRVR-01 through SRVR-10 in resilienceHandler.integration.spec.ts
+- [ ] 08-02-PLAN.md — TDD GREEN: implement resilienceHandler.ts, wire emitUpdate() buffer write, register in socket.ts, confirm SRVR-07 regression gate
 
 ---
 
@@ -133,6 +137,6 @@ Plans:
 | 5. Verify End-to-End Behavior | v1.1 | 1/1 | Complete | 2026-04-20 |
 | 6. Protocol Contract | v1.3 | 0/3 | Not started | - |
 | 7. Server Storage Layer | v1.3 | 0/3 | Not started | - |
-| 8. Server Socket Integration | v1.3 | 0/? | Not started | - |
+| 8. Server Socket Integration | v1.3 | 0/2 | Not started | - |
 | 9. Mobile Reconnect and Deduplication | v1.3 | 0/? | Not started | - |
 | 10. E2E Validation and Hardening | v1.3 | 0/? | Not started | - |
