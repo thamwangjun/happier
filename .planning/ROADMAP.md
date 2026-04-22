@@ -68,9 +68,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Schema + RED tests: add UnackedMessage + ClientAckState to schema.prisma, run yarn generate, write all failing unit tests for STORE-01 through STORE-07
-- [ ] 07-02-PLAN.md — GREEN: implement unackedBuffer.ts (writeToBuffer, readBuffer, ackBuffer) to pass STORE-01, STORE-02, STORE-04, STORE-05, STORE-07 tests
-- [ ] 07-03-PLAN.md — GREEN: implement unackedMessageRetentionRule.ts + register in retentionRuleRegistry.ts to pass STORE-03, STORE-06 tests
+- [x] 07-01-PLAN.md — Schema + RED tests: add UnackedMessage + ClientAckState to schema.prisma, run yarn generate, write all failing unit tests for STORE-01 through STORE-07
+- [x] 07-02-PLAN.md — GREEN: implement unackedBuffer.ts (writeToBuffer, readBuffer, ackBuffer) to pass STORE-01, STORE-02, STORE-04, STORE-05, STORE-07 tests
+- [x] 07-03-PLAN.md — GREEN: implement unackedMessageRetentionRule.ts + register in retentionRuleRegistry.ts to pass STORE-03, STORE-06 tests
 
 ---
 
