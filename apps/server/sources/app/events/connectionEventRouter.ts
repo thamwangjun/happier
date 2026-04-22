@@ -6,6 +6,7 @@ import {
     type UpdatePayload,
     type EphemeralPayload,
 } from "./eventPayloadTypes";
+import { writeToBuffer } from "@/app/resilience/unackedBuffer";
 
 class EventRouter {
     private userConnections = new Map<string, Set<ClientConnection>>();
@@ -60,6 +61,15 @@ class EventRouter {
             recipientFilter: params.recipientFilter || { type: 'all-user-authenticated-connections' },
             skipSenderConnection: params.skipSenderConnection
         });
+        // Fire-and-forget buffer write (SRVR-01, D-04).
+        // Promise.resolve() is used (not void) so the catch handler receives the rejection.
+        // writeToBuffer's own CLI exclusion guard (connectionKey.startsWith('user-scoped:'))
+        // ensures machine-scoped and session-scoped connections are never buffered (STORE-07).
+        Promise.resolve(
+            writeToBuffer(params.userId, `user-scoped:${params.userId}`, params.payload)
+        ).catch((err) =>
+            log({ module: 'resilience', level: 'warn' }, `writeToBuffer failed for user ${params.userId}: ${err}`)
+        );
     }
 
     emitEphemeral(params: {
@@ -197,3 +207,8 @@ class EventRouter {
 }
 
 export const eventRouter = new EventRouter();
+
+// Alias export for integration tests and resilience handler access (SRVR-01).
+// All server code continues to use eventRouter; this alias is for explicit
+// connection-event routing semantics in resilience-aware code paths.
+export const connectionEventRouter = eventRouter;
