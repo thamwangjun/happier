@@ -176,7 +176,8 @@ describe("resilienceHandler", async () => {
         });
     });
 
-    it.todo("SRVR-07: verified by running 'yarn test' in apps/cli — no code change needed; startupCatchUpRetry.test.ts must pass unchanged");
+    // SRVR-07 (startup catch-up retry) is covered in apps/cli startupCatchUpRetry.test.ts.
+    // There is no server-side assertion for this behaviour — it is exercised entirely at the CLI layer.
 });
 
 describe("SRVR-01: emitUpdate() writes to buffer fire-and-forget", async () => {
