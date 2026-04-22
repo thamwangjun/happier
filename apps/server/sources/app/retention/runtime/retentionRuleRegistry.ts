@@ -1,6 +1,7 @@
 import type { RetentionPolicy } from '@/app/retention/config/retentionPolicyTypes';
 import { resolveEffectiveRetentionDomains } from '@/app/retention/config/retentionPolicyState';
 
+import { createUnackedMessageRetentionRule } from '@/app/resilience/unackedMessageRetentionRule';
 import { runAccountChangeRetentionRule } from '@/app/retention/rules/accountChangeRetentionRule';
 import { createAutomationRunEventRetentionRule } from '@/app/retention/rules/automationRunEventRetentionRule';
 import { createAutomationRunRetentionRule } from '@/app/retention/rules/automationRunRetentionRule';
@@ -66,5 +67,6 @@ export function createRetentionRuleRegistry(): readonly RetentionRule[] {
         createGlobalLockRetentionRule(),
         createAutomationRunRetentionRule(),
         createAutomationRunEventRetentionRule(),
+        createUnackedMessageRetentionRule(),
     ]);
 }
