@@ -29,13 +29,17 @@
 **Goal**: Users can set a global `default` boolean in their settings file and the daemon correctly applies it as the fallback for any tool not individually configured
 **Depends on**: Phase 3 (v1.0 complete)
 **Requirements**: SCHEMA-01, SCHEMA-02, SCHEMA-03, SCHEMA-04, VALID-01
+**Plans**: 1 plan
+
+Plans:
+- [ ] 04-01-PLAN.md — Extend schema with default?: boolean and update predicate to 3-level lookup (per-tool → default → true)
+
 **Success Criteria** (what must be TRUE):
   1. A settings file with `default: false` causes all tools without a per-tool entry to be disabled (opt-in mode is active)
   2. A settings file with `default: true` causes all tools without a per-tool entry to be enabled (explicit opt-out model unchanged in behavior)
   3. A settings file without `default` behaves identically to before the change — no behavior change for existing users
   4. A per-tool entry `enabled: true` takes effect even when `default: false` is set (per-tool always wins over the global default)
   5. Corrupt or missing `default` field does not crash the daemon at startup — the no-throw reader handles it gracefully
-**Plans**: TBD
 
 ### Phase 5: Tests & Docs
 **Goal**: The predicate's lookup order is verified by passing unit tests across all three scenarios, and users can read a worked example of the `default: false` opt-in pattern in the docs
@@ -53,5 +57,5 @@
 | 1. Schema & Reader | v1.0 | 1/1 | Complete | 2026-04-19 |
 | 2. Startup Wiring & Tool Filtering | v1.0 | 3/3 | Complete | 2026-04-19 |
 | 3. Validation Feedback | v1.0 | 1/1 | Complete | 2026-04-19 |
-| 4. Schema & Predicate | v1.1 | 0/TBD | Not started | - |
+| 4. Schema & Predicate | v1.1 | 0/1 | Not started | - |
 | 5. Tests & Docs | v1.1 | 0/TBD | Not started | - |
