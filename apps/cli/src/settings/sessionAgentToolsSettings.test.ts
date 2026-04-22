@@ -201,5 +201,11 @@ describe('sessionAgentToolsSettings', () => {
                 await import('./sessionAgentToolsSettings');
             expect(findUnknownSessionAgentToolNames(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS, ['change_title'])).toEqual([]);
         });
+
+        it('does not treat the default field as a tool name', async () => {
+            const { findUnknownSessionAgentToolNames } = await import('./sessionAgentToolsSettings');
+            const settings = { v: 1 as const, tools: { change_title: { enabled: false } }, default: false };
+            expect(findUnknownSessionAgentToolNames(settings, ['change_title'])).toEqual([]);
+        });
     });
 });
