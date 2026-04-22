@@ -114,29 +114,14 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tauri macOS/Windows desktop app (wrapping Expo web export) — existing
 - ✓ Desktop auto-updater — existing
 
-## Current Milestone: v1.1 Session Agent Tools — Global Default
+## Recently Validated
 
-**Goal:** Add a `default` boolean to `sessionAgentToolsSettingsV1` that sets the enabled baseline for all tools not individually configured.
-
-**Target features:**
-- `default?: boolean` field in settings schema (Zod)
-- Predicate lookup order: per-tool entry → `default` → `true` (preserves existing opt-out behavior)
-- Per-tool explicit entry always overrides the global default
-- No-throw reader handles the new field gracefully
-- Unit tests covering all three lookup scenarios
-- Docs updated with `default: false` (opt-in) examples
-
-### Active
-
-- Phase 5: Tests & Docs — complete (2026-04-22)
-
-### Recently Validated
-
-**Global Default (v1.1, Phase 4 — Validated 2026-04-22)**
-- ✓ `default?: boolean` field added to `SessionAgentToolsSettingsSchema` (Zod, optional, no `.default()`)
-- ✓ 3-level predicate: per-tool entry → `settings.default` → `true` fallback
-- ✓ V1 TypeScript identifiers renamed to un-versioned form (JSON key preserved for backward compat)
-- ✓ 21 unit tests pass; tsc --noEmit exits 0
+**Global Default (v1.1, Phases 4-5 — Shipped 2026-04-22)**
+- ✓ `default?: boolean` field added to `SessionAgentToolsSettingsSchema` (Zod, optional, no `.default()`) — v1.1
+- ✓ 3-level predicate: per-tool entry → `settings.default` → `true` fallback — v1.1
+- ✓ V1 TypeScript identifiers renamed to un-versioned form (JSON key preserved for backward compat) — v1.1
+- ✓ 26 unit tests pass (TEST-01..04 covering all 3-level lookup scenarios); tsc --noEmit exits 0 — v1.1
+- ✓ `docs/mcp-tool-filtering.md` updated with Example E opt-in mode pattern and corrected stale V1 references — v1.1
 
 **MCP Tool Configuration (v1.0)**
 - ✓ `sessionAgentToolsSettingsV1` settings schema: per-tool enable/disable in `~/.happier-dev/settings.json`, opt-out model, no-throw reader — v1.0
@@ -144,11 +129,16 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tool registration filter: absent or missing key defaults to `enabled: true`; corrupt config falls back to all-tools-enabled with `logger.warn` — v1.0
 - ✓ Validation feedback: `findUnknownSessionAgentToolNames` warns on unrecognized tool names at startup without affecting valid entries — v1.0
 
-### Out of Scope
+## Active
+
+*(none — planning next milestone)*
+
+## Out of Scope
 
 - Per-project `.mcp.json` overrides (deferred — user-global settings first)
 - Remote/server-side tool configuration
-- UI for editing settings (hand-edit only for v1.0)
+- UI for editing settings (hand-edit only)
+- Per-backend `default` (different defaults per AI provider) — not needed; single global default sufficient
 
 ## Context
 
@@ -180,6 +170,10 @@ A developer can start an AI coding session on their machine and seamlessly conti
 | Opt-out model: absent key = enabled | Existing users see no behavior change; no migration required when tools are added | ✓ Good — v1.0 |
 | Read settings once at startup, not per-request | Deterministic tool list per server lifecycle; avoids mid-session surprises | ✓ Good — v1.0 |
 | Pure `findUnknownSessionAgentToolNames` + call-site `logger.warn` | Separates validation logic from IO; enables clean unit testing without logger mocking | ✓ Good — v1.0 |
+| `z.boolean().optional()` without `.default()` for `default` field | Absence is distinguishable from explicit `true` at predicate level — enables clean 3-level fallback | ✓ Good — v1.1 |
+| Predicate fallback `?? true` not `?? false` | Backward-compatible opt-out for all existing users without a `default` field | ✓ Good — v1.1 |
+| JSON key `sessionAgentToolsSettingsV1` not renamed in settings.json | Only TypeScript identifiers renamed; settings file format unchanged for backward compat | ✓ Good — v1.1 |
+| 3-level lookup tests as sibling `describe` block (not nested) | Explicit requirement traceability (TEST-01..04 labels) without restructuring existing test suite | ✓ Good — v1.1 |
 
 ## Evolution
 
@@ -199,4 +193,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 — Phase 5 complete (Tests & Docs). Milestone v1.1 fully executed.*
+*Last updated: 2026-04-22 after v1.1 milestone — Session Agent Tools Global Default shipped. Planning next milestone.*
