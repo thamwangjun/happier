@@ -7,5 +7,5 @@ export function createReplayGate(): ReplayGate {
 }
 
 export function shouldHoldServerCommit(gate: ReplayGate): boolean {
-    throw new Error('not implemented');
+    return gate.isReplaying;
 }
