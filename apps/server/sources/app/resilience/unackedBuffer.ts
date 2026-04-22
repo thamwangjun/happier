@@ -3,6 +3,7 @@ import { inTx } from '@/storage/inTx';
 import type { Tx } from '@/storage/inTx';
 import { getRelayBufferCapFromEnv } from '@/config/backends';
 import type { UpdatePayload } from '@/app/events/eventPayloadTypes';
+import type { Prisma } from '@prisma/client';
 
 /**
  * Writes an outbound UpdatePayload to the per-user buffer.
@@ -29,17 +30,17 @@ export async function writeToBuffer(
     }
 
     return await inTx(async (tx: Tx) => {
-        await (tx as any).unackedMessage.create({
+        await tx.unackedMessage.create({
             data: {
                 userId,
                 connectionKey,
                 seq: payload.seq,
-                payload: payload as any,
+                payload: payload as unknown as Prisma.InputJsonValue,
                 createdAt: new Date(),
             },
         });
 
-        const count = await (tx as any).unackedMessage.count({
+        const count = await tx.unackedMessage.count({
             where: { userId, connectionKey },
         });
 
@@ -47,14 +48,14 @@ export async function writeToBuffer(
 
         if (overflow) {
             const excess = count - cap;
-            const oldest = await (tx as any).unackedMessage.findMany({
+            const oldest = await tx.unackedMessage.findMany({
                 where: { userId, connectionKey },
                 orderBy: { seq: 'asc' },
                 take: excess,
                 select: { id: true },
             });
-            await (tx as any).unackedMessage.deleteMany({
-                where: { id: { in: oldest.map((r: any) => r.id) } },
+            await tx.unackedMessage.deleteMany({
+                where: { id: { in: oldest.map((r) => r.id) } },
             });
         }
 
@@ -72,11 +73,11 @@ export async function readBuffer(
     connectionKey: string,
     afterSeq: number,
 ): Promise<UpdatePayload[]> {
-    const rows = await (db as any).unackedMessage.findMany({
+    const rows = await db.unackedMessage.findMany({
         where: { userId, connectionKey, seq: { gt: afterSeq } },
         orderBy: { seq: 'asc' },
     });
-    return rows.map((r: any) => r.payload as UpdatePayload);
+    return rows.map((r) => r.payload as unknown as UpdatePayload);
 }
 
 /**
@@ -89,7 +90,7 @@ export async function ackBuffer(
     connectionKey: string,
     ackedSeq: number,
 ): Promise<void> {
-    await (db as any).unackedMessage.deleteMany({
+    await db.unackedMessage.deleteMany({
         where: { userId, connectionKey, seq: { lte: ackedSeq } },
     });
 }
