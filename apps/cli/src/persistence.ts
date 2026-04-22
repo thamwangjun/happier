@@ -846,11 +846,15 @@ export async function acquireDaemonLock(
 export async function releaseDaemonLock(lockHandle: FileHandle): Promise<void> {
   try {
     await lockHandle.close();
-  } catch { }
+  } catch (err) {
+    logger.debug('[releaseDaemonLock] Error closing lock handle:', err);
+  }
 
   try {
     if (existsSync(configuration.daemonLockFile)) {
       unlinkSync(configuration.daemonLockFile);
     }
-  } catch { }
+  } catch (err) {
+    logger.debug('[releaseDaemonLock] Error removing daemon lock file:', err);
+  }
 }
