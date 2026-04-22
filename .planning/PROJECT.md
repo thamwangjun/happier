@@ -114,9 +114,19 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tauri macOS/Windows desktop app (wrapping Expo web export) — existing
 - ✓ Desktop auto-updater — existing
 
-### Active
+## Current Milestone: v1.1 Session Agent Tools — Global Default
 
-*(Planning next milestone)*
+**Goal:** Add a `default` boolean to `sessionAgentToolsSettingsV1` that sets the enabled baseline for all tools not individually configured.
+
+**Target features:**
+- `default?: boolean` field in settings schema (Zod)
+- Predicate lookup order: per-tool entry → `default` → `true` (preserves existing opt-out behavior)
+- Per-tool explicit entry always overrides the global default
+- No-throw reader handles the new field gracefully
+- Unit tests covering all three lookup scenarios
+- Docs updated with `default: false` (opt-in) examples
+
+### Active
 
 ### Recently Validated
 
@@ -181,4 +191,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-19 — after v1.0 milestone (MCP Tool Configuration)*
+*Last updated: 2026-04-22 — milestone v1.1 started (Session Agent Tools — Global Default)*

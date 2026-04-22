@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: (planning)
+milestone_name: Session Agent Tools — Global Default
 status: planning
-stopped_at: Milestone v1.0 complete
-last_updated: "2026-04-19T00:00:00.000Z"
-last_activity: 2026-04-20
+stopped_at: Milestone v1.1 started
+last_updated: "2026-04-22T00:00:00.000Z"
+last_activity: 2026-04-22
 progress:
   total_phases: 0
   completed_phases: 0
@@ -18,14 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-19)
+See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Control AI coding agent sessions remotely from any device, with end-to-end encryption.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v1.1 — Session Agent Tools Global Default
 
 ## Current Position
 
-Milestone v1.0 shipped 2026-04-19. Planning next milestone.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-22 — Milestone v1.1 started
 
 ## Accumulated Context
 
