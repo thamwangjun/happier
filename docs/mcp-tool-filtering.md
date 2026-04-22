@@ -149,6 +149,8 @@ Run the session agent with no Happier built-in tools exposed — useful for lock
 }
 ```
 
+> **Note:** This list is provided for reference only. If a tool name is renamed or removed, the daemon emits a `logger.warn` at startup for unrecognised names but continues normally. Use `happier tools list` (if available) to get the current catalog.
+
 #### Example E — Opt-in mode (allow only specific tools)
 
 To restrict the session agent to a small explicit allowlist, set `"default": false` to disable all tools by default, then selectively re-enable only the tools you need. Any tool without an explicit `"enabled": true` entry will be blocked:
