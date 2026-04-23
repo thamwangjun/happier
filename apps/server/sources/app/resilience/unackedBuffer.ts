@@ -30,7 +30,7 @@ export async function writeToBuffer(
         return { overflow: false };
     }
 
-    return await inTx(async (tx: Tx) => {
+    const result = await inTx(async (tx: Tx) => {
         await tx.unackedMessage.create({
             data: {
                 userId,
@@ -60,9 +60,11 @@ export async function writeToBuffer(
             });
         }
 
-        bufferWritesTotal.inc();
         return { overflow };
     });
+
+    bufferWritesTotal.inc();   // Only counted on successful commit
+    return result;
 }
 
 /**
