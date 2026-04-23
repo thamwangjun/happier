@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDbMocks, createDbTransactionMock, installDbModuleMock } from "../testkit/dbMocks";
 import { createFakeSocket, triggerSocketHandler } from "../testkit/socketHarness";
 
@@ -180,13 +180,17 @@ describe("resilienceHandler", async () => {
     // There is no server-side assertion for this behaviour — it is exercised entirely at the CLI layer.
 });
 
-describe("SRVR-01: emitUpdate() writes to buffer fire-and-forget", async () => {
-    // Dynamic import connectionEventRouter AFTER mocks — tests that emitUpdate calls writeToBuffer.
-    // NOTE: This imports the module at '@/app/events/connectionEventRouter' which Plan 02 creates.
-    // Until then, this describe block fails with module-not-found (RED gate).
-    // vi.importActual bypasses the top-level vi.mock so we get the real implementation,
-    // while @/app/resilience/unackedBuffer remains mocked — allowing writeToBuffer assertions.
-    const { connectionEventRouter } = await vi.importActual<typeof import("@/app/events/connectionEventRouter")>("@/app/events/connectionEventRouter");
+describe("SRVR-01: emitUpdate() writes to buffer fire-and-forget", () => {
+    // vi.importActual is called inside beforeAll (not at describe top-level) so it runs
+    // after mocks are installed and Vitest has fully registered the describe block.
+    // Calling it at the top level of an async describe is non-deterministic because
+    // Vitest does not await async describe callbacks during collection.
+    let connectionEventRouter: typeof import("@/app/events/connectionEventRouter")["connectionEventRouter"];
+
+    beforeAll(async () => {
+        const mod = await vi.importActual<typeof import("@/app/events/connectionEventRouter")>("@/app/events/connectionEventRouter");
+        connectionEventRouter = mod.connectionEventRouter;
+    });
 
     beforeEach(() => {
         vi.clearAllMocks();
