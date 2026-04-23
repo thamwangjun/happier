@@ -234,7 +234,9 @@ Emitted by the server in all reconnect paths: after the last buffered message is
 after `buffer-overflow` is signalled, or immediately if the buffer is empty.
 This is the universal gate-release signal for the mobile outbound queue.
 
-No payload.
+Payload: `{ retentionStart: number | null }` — the oldest `seq` still in the buffer at the
+time of replay. `null` when the buffer is empty. Mobile clients use this to detect
+non-contiguous gaps (see MOB-09).
 
 #### `buffer-overflow`
 Emitted during reconnect when the buffer for this client was capped (overflow occurred
