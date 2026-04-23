@@ -15,16 +15,18 @@ import { MessageAckResponseSchema } from '@happier-dev/protocol/updates';
 const run = createRunDirs({ runLabel: 'stress' });
 
 /**
- * WAL Contention Stress Test (VALID-03)
+ * Buffer Write Contention Stress Test (VALID-03)
  *
- * Validates that the SQLite UnackedMessageBuffer can sustain 200 concurrent writes
- * without SQLite BUSY errors, WAL timeouts, or OOM conditions.
+ * Validates that the UnackedMessageBuffer can sustain 200 concurrent writes
+ * without Prisma connection pool exhaustion, serialization errors, or OOM conditions.
+ * The server uses PostgreSQL; this test exercises PostgreSQL-level concurrency
+ * (connection pool saturation, row-level locking) rather than SQLite WAL semantics.
  *
  * Key: messages are fired with Promise.all (not serial await), which creates real
- * concurrent writes to the UnackedMessage table and exercises the WAL write path.
+ * concurrent writes to the UnackedMessage table and exercises the concurrent write path.
  * Serial sends would serialize DB writes and never trigger contention.
  */
-describe('stress: SQLite WAL contention under high-frequency UnackedMessageBuffer writes', () => {
+describe('stress: concurrent UnackedMessageBuffer writes under high-frequency load', () => {
   let server: StartedServer;
   let token: string;
 
@@ -39,7 +41,7 @@ describe('stress: SQLite WAL contention under high-frequency UnackedMessageBuffe
     await server.stop();
   });
 
-  it('200 concurrent buffer writes complete without SQLite BUSY or WAL errors', async () => {
+  it('200 concurrent buffer writes complete without connection pool exhaustion or serialization errors', async () => {
     const saveArtifactsOnSuccess = envFlag(['HAPPIER_E2E_SAVE_ARTIFACTS', 'HAPPY_E2E_SAVE_ARTIFACTS'], false);
     const startedAt = new Date().toISOString();
     const testDir = run.testDir('wal-contention');
@@ -81,7 +83,7 @@ describe('stress: SQLite WAL contention under high-frequency UnackedMessageBuffe
 
     try {
       // Burst: fire BURST messages concurrently without awaiting each ack before sending the next.
-      // This is the key to triggering real SQLite WAL contention on the UnackedMessage table.
+      // This is the key to triggering real Prisma connection pool saturation on the UnackedMessage table.
       // Do NOT convert to serial await — serial sends serialize DB writes and prevent contention.
       const BURST = 200;
       const sends = Array.from({ length: BURST }, (_, i) => {
@@ -92,7 +94,7 @@ describe('stress: SQLite WAL contention under high-frequency UnackedMessageBuffe
 
       const results = await Promise.all(sends);
 
-      // Assert all 200 writes succeeded — no SQLite BUSY, no WAL timeout, no OOM.
+      // Assert all 200 writes succeeded — no connection pool exhaustion, no serialization error, no OOM.
       let okCount = 0;
       for (const raw of results) {
         const ack = MessageAckResponseSchema.parse(raw);
