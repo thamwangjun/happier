@@ -6,6 +6,45 @@ This document tracks E2E and physical-device tests that were scoped, designed, o
 
 ---
 
+## Verification Debt
+
+Items marked `human_needed` in phase VERIFICATION.md files. The automated verification scored **18/20 must-haves** across the milestone; the 2 remaining items are environment constraints, not implementation failures.
+
+### Phase 08 — Server Socket Integration (score: 7/8)
+
+| # | Requirement | Status | Blocker |
+|---|-------------|--------|---------|
+| SRVR-07 | `sessionClient.startupCatchUpRetry.test.ts` passes unchanged (CLI regression gate) | ? NEEDS HUMAN | `yarn` not on PATH in verification environment; CLI `globalSetup` calls `spawnSync yarn` to pre-build protocol packages. The test file itself has no imports from server resilience code — low implementation risk. |
+| SRVR-05 | Postgres/Redis mode integration test runs and passes | ? NEEDS HUMAN | `describe.skipIf(!REDIS_URL)` block skipped — no Redis instance available. Test logic is structurally identical to the passing SQLite path. |
+
+**How to clear SRVR-07:**
+```bash
+cd apps/cli && yarn test
+# Expected: 2/2 tests pass in sessionClient.startupCatchUpRetry.test.ts
+```
+
+**How to clear SRVR-05:**
+```bash
+REDIS_URL=redis://localhost:6379 cd apps/server && \
+  npx vitest --config vitest.integration.config.ts --reporter verbose \
+  sources/app/api/socket/resilienceHandler.integration.spec.ts
+# Expected: 10 passed, 0 skipped, 1 todo
+```
+
+---
+
+### Phase 10 — E2E Validation and Hardening (score: 11/12)
+
+| # | Requirement | Status | Blocker |
+|---|-------------|--------|---------|
+| VALID-04 | Android Doze QA checklist executed on physical device | ? NEEDS HUMAN | Requires USB-connected Android device with ADB. MOB-05/MOB-06/Doze socket resurrection cannot be exercised from CI. |
+
+All other Phase 10 truths are verified: Prometheus counters wired (VALID-02), E2E reconnect test passing (VALID-01), WAL contention stress test 200/200 (VALID-03).
+
+**How to clear VALID-04:** See [Android Doze QA Checklist](./android-doze-qa-checklist.md) — execute all three scenarios.
+
+---
+
 ## Deferred Items
 
 ### 1. Android Doze QA — Physical Device Execution
@@ -57,6 +96,23 @@ REDIS_URL=<redis-url> cd apps/server && npx vitest --config vitest.integration.c
   sources/app/api/socket/resilienceHandler.integration.spec.ts
 ```
 Confirm the Postgres/Redis describe block runs and passes.
+
+---
+
+### 4. CLI Regression Gate — `yarn` Environment
+
+**Requirement:** SRVR-07
+**Phase:** 08 — Server Socket Integration
+
+The CLI test suite (`apps/cli && yarn test`) could not be executed in the verification environment because `yarn` was not on PATH. The CLI `globalSetup` calls `spawnSync yarn` to pre-build protocol packages; vitest fails at startup with ENOENT before any test runs.
+
+`sessionClient.startupCatchUpRetry.test.ts` only tests `ApiSessionClient.scheduleNextStartupMessageCatchUpRetry` and has no imports from any server resilience file — so implementation risk is very low, but the passing test has not been confirmed on this branch.
+
+**What to do:**
+```bash
+cd apps/cli && yarn test
+```
+Expected: `sessionClient.startupCatchUpRetry.test.ts` reports 2/2 tests passing.
 
 ---
 
