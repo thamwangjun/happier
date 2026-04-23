@@ -9,6 +9,7 @@ import { resolveSentFrom } from '@/sync/domains/messages/sentFrom';
 import { buildSendMessageMeta } from '@/sync/domains/messages/buildSendMessageMeta';
 import { SessionStoredMessageContentSchema, type SessionStoredMessageContent } from '@happier-dev/protocol';
 import { t } from '@/text';
+import { shouldHoldServerCommit } from '../resilience/replayGate';
 
 type PendingStatus = 'queued' | 'discarded';
 
@@ -344,7 +345,7 @@ export async function enqueuePendingMessageV2(params: {
         await runPendingEnqueueCommitInOrder(sessionId, async () => {
             // MOB-07: hold server-commit flush during replay without dropping from the promise chain.
             // waitForReplayComplete() resolves immediately when isReplaying=false, or waits for REPLAY_COMPLETE.
-            if (replayGate?.isReplaying) {
+            if (replayGate && shouldHoldServerCommit(replayGate)) {
                 await replayGate.waitForReplayComplete();
             }
             let writeBody: Record<string, unknown>;
