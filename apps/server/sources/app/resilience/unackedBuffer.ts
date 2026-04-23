@@ -4,6 +4,7 @@ import type { Tx } from '@/storage/inTx';
 import { getRelayBufferCapFromEnv } from '@/config/backends';
 import type { UpdatePayload } from '@/app/events/eventPayloadTypes';
 import type { Prisma } from '@prisma/client';
+import { bufferWritesTotal, bufferAcksTotal } from '@/app/monitoring/metrics2';
 
 /**
  * Writes an outbound UpdatePayload to the per-user buffer.
@@ -59,6 +60,7 @@ export async function writeToBuffer(
             });
         }
 
+        bufferWritesTotal.inc();
         return { overflow };
     });
 }
@@ -93,4 +95,5 @@ export async function ackBuffer(
     await db.unackedMessage.deleteMany({
         where: { userId, connectionKey, seq: { lte: ackedSeq } },
     });
+    bufferAcksTotal.inc();
 }

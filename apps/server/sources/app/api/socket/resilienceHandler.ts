@@ -6,6 +6,8 @@ import {
     AckUpdateRequestSchema,
 } from "@happier-dev/protocol/socketResilience";
 import { readBuffer, ackBuffer } from "@/app/resilience/unackedBuffer";
+import { db } from '@/storage/db';
+import { bufferRedeliveriesTotal, dedupDropsTotal } from '@/app/monitoring/metrics2';
 
 /**
  * Registers Socket.IO event handlers for the reconnect-resume resilience flow.
@@ -26,6 +28,17 @@ export function resilienceHandler(userId: string, socket: Socket): void {
 
             const { lastAckedSeq } = parsed.data;
             const connectionKey = `user-scoped:${userId}`;
+
+            // Count already-acked entries still in the buffer (seq <= lastAckedSeq).
+            // readBuffer filters these out via { gt: afterSeq }; we count them here
+            // as "dedup drops" — messages the client already has that won't be replayed (VALID-02).
+            const dupCount = await db.unackedMessage.count({
+                where: { userId, connectionKey, seq: { lte: lastAckedSeq } },
+            });
+            if (dupCount > 0) {
+                dedupDropsTotal.inc(dupCount);
+            }
+
             const rows = await readBuffer(userId, connectionKey, lastAckedSeq);
 
             // retentionStart: the oldest seq still in the buffer (SRVR-10).
@@ -59,6 +72,7 @@ export function resilienceHandler(userId: string, socket: Socket): void {
             // On Path 2 (overflow), messages are still sent — see comment above.
             for (const payload of rows) {
                 socket.emit(SOCKET_RESILIENCE_EVENTS.UPDATE, payload);
+                bufferRedeliveriesTotal.inc();
             }
 
             // Path 1 + Path 2: always close the client gate after replay (SRVR-09)
