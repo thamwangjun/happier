@@ -164,8 +164,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — Wire shouldHoldServerCommit into pendingQueueV2.ts replacing direct isReplaying field access (MOB-07)
-- [ ] 12-02-PLAN.md — Add PROTO-04 ackSeq comment, verify WR-03 writeToBuffer guard, close VALID-04 in audit (PROTO-04, WR-03, VALID-04)
+- [x] 12-01-PLAN.md — Wire shouldHoldServerCommit into pendingQueueV2.ts replacing direct isReplaying field access (MOB-07)
+- [x] 12-02-PLAN.md — Add PROTO-04 ackSeq comment, verify WR-03 writeToBuffer guard, close VALID-04 in audit (PROTO-04, WR-03, VALID-04)
 
 ---
 
