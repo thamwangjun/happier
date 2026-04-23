@@ -127,7 +127,13 @@ Plans:
   2. A developer running `curl /metrics` on the relay sees four new counters — `buffer_writes_total`, `buffer_acks_total`, `buffer_redeliveries_total`, `dedup_drops_total` — all incrementing correctly during a simulated reconnect
   3. A load test that saturates the buffer under high-frequency transcript streaming completes without SQLite write errors, WAL timeouts, or OOM conditions — the load test report is committed alongside the test
   4. A developer can follow the documented Android Doze QA checklist on a physical device, execute each step, and record pass/fail results — the checklist is in version control and covers foreground, background, and Doze transitions
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Add 4 Prometheus counters to metrics2.ts; wire call sites in unackedBuffer.ts and resilienceHandler.ts; add SocketCollector.on()/off() to testkit
+- [ ] 10-02-PLAN.md — Create docs/android-doze-qa-checklist.md with 3 scenarios (Background/ack-flush, Foreground/reconnect, Doze/socket-resurrection); link from PROTOCOL_CHANGES.md
+- [ ] 10-03-PLAN.md — E2E test: reconnect.resilience.e2e.test.ts asserting reconnect-resume payload, replay-complete receipt, and zero duplicate seqs
+- [ ] 10-04-PLAN.md — WAL contention stress test: buffer.walContention.stress.test.ts with 200 concurrent writes via Promise.all
 
 ---
 
@@ -143,5 +149,5 @@ Plans:
 | 6. Protocol Contract | v1.3 | 0/3 | Not started | - |
 | 7. Server Storage Layer | v1.3 | 0/3 | Not started | - |
 | 8. Server Socket Integration | v1.3 | 0/2 | Not started | - |
-| 9. Mobile Reconnect and Deduplication | v1.3 | 0/? | Not started | - |
-| 10. E2E Validation and Hardening | v1.3 | 0/? | Not started | - |
+| 9. Mobile Reconnect and Deduplication | v1.3 | 0/3 | Not started | - |
+| 10. E2E Validation and Hardening | v1.3 | 0/4 | Not started | - |
