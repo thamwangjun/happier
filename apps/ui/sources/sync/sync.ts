@@ -1718,6 +1718,7 @@ class Sync {
             fetchArtifactWithBody: (artifactId) => this.fetchArtifactWithBody(artifactId),
             updateArtifact: (artifact) => storage.getState().updateArtifact(artifact),
             request,
+            replayGate: this,
         });
     }
 

@@ -381,8 +381,13 @@ export async function updatePendingMessageV2(params: {
     fetchArtifactWithBody?: (artifactId: string) => Promise<DecryptedArtifact | null>;
     updateArtifact?: (artifact: DecryptedArtifact) => void;
     request: (path: string, init?: RequestInit) => Promise<Response>;
+    /**
+     * MOB-07: optional replay gate — holds the PATCH inside updatePendingMessageV2
+     * until replay-complete fires, mirroring the same guard in enqueuePendingMessageV2.
+     */
+    replayGate?: { isReplaying: boolean; waitForReplayComplete(): Promise<void> };
 }): Promise<void> {
-    const { sessionId, pendingId, text, encryption, request } = params;
+    const { sessionId, pendingId, text, encryption, request, replayGate } = params;
 
     const session = storage.getState().sessions[sessionId] ?? null;
     const sessionEncryptionMode: 'e2ee' | 'plain' = session?.encryptionMode === 'plain' ? 'plain' : 'e2ee';
@@ -441,6 +446,11 @@ export async function updatePendingMessageV2(params: {
             ? { content: { t: 'plain', v: rawRecord } }
             : { ciphertext: await sessionEncryption!.encryptRawRecord(rawRecord) };
     const updatedAt = nowServerMs();
+
+    // MOB-07: hold the PATCH during replay, matching the guard in enqueuePendingMessageV2.
+    if (replayGate && shouldHoldServerCommit(replayGate)) {
+        await replayGate.waitForReplayComplete();
+    }
 
     const response = await request(`/v2/sessions/${sessionId}/pending/${pendingId}`, {
         method: 'PATCH',
