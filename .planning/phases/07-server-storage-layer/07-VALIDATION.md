@@ -1,10 +1,11 @@
 ---
 phase: 7
 slug: server-storage-layer
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-22
+audited: 2026-04-23
 ---
 
 # Phase 7 — Validation Strategy
@@ -19,16 +20,16 @@ created: 2026-04-22
 |----------|-------|
 | **Framework** | vitest |
 | **Config file** | `apps/server/vitest.config.ts` |
-| **Quick run command** | `yarn workspace happier-server test --run sources/app/resilience` |
-| **Full suite command** | `yarn workspace happier-server test --run` |
+| **Quick run command** | `cd apps/server && yarn test --run sources/app/resilience` |
+| **Full suite command** | `cd apps/server && yarn test --run` |
 | **Estimated runtime** | ~10 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `yarn workspace happier-server test --run sources/app/resilience`
-- **After every plan wave:** Run `yarn workspace happier-server test --run`
+- **After every task commit:** Run `cd apps/server && yarn test --run sources/app/resilience`
+- **After every plan wave:** Run `cd apps/server && yarn test --run`
 - **Before `/gsd-verify-work`:** Full suite must be green
 - **Max feedback latency:** 15 seconds
 
@@ -38,15 +39,15 @@ created: 2026-04-22
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 7-01-01 | 01 | 0 | STORE-01 | — | N/A | unit stub | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ❌ W0 | ⬜ pending |
-| 7-01-02 | 01 | 1 | STORE-01 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ⬜ pending |
-| 7-02-01 | 01 | 1 | STORE-02 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ⬜ pending |
-| 7-03-01 | 01 | 1 | STORE-03 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ⬜ pending |
-| 7-04-01 | 01 | 1 | STORE-04 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ⬜ pending |
-| 7-05-01 | 01 | 1 | STORE-05 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ⬜ pending |
-| 7-06-01 | 02 | 1 | STORE-06 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ⬜ pending |
-| 7-07-01 | 02 | 1 | STORE-07 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ⬜ pending |
-| 7-08-01 | 02 | 2 | STORE-06 | — | N/A | unit | `yarn workspace happier-server test --run sources/app/resilience` | ✅ | ⬜ pending |
+| 7-01-01 | 01 | 0 | STORE-01 | — | N/A | unit stub | `cd apps/server && yarn test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ✅ green |
+| 7-01-02 | 01 | 1 | STORE-01 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ✅ green |
+| 7-02-01 | 01 | 1 | STORE-02 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ✅ green |
+| 7-03-01 | 01 | 1 | STORE-03 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience/unackedMessageRetentionRule.spec.ts` | ✅ | ✅ green |
+| 7-04-01 | 01 | 1 | STORE-04 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ✅ green |
+| 7-05-01 | 01 | 1 | STORE-05 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ✅ green |
+| 7-06-01 | 02 | 1 | STORE-06 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience/unackedMessageRetentionRule.spec.ts` | ✅ | ✅ green |
+| 7-07-01 | 02 | 1 | STORE-07 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience/unackedBuffer.spec.ts` | ✅ | ✅ green |
+| 7-08-01 | 02 | 2 | STORE-06 | — | N/A | unit | `cd apps/server && yarn test --run sources/app/resilience` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -54,7 +55,7 @@ created: 2026-04-22
 
 ## Wave 0 Requirements
 
-- [ ] `apps/server/sources/app/resilience/unackedBuffer.spec.ts` — failing stubs for STORE-01 through STORE-07 (RED phase)
+- [x] `apps/server/sources/app/resilience/unackedBuffer.spec.ts` — failing stubs for STORE-01 through STORE-07 (RED phase)
 
 *All other infrastructure (vitest, createDbMocks, installDbModuleMock) exists.*
 
@@ -70,11 +71,30 @@ created: 2026-04-22
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
+
+---
+
+## Validation Audit 2026-04-23
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Test run result: **8 tests passed (2 files)** in 2.72s — all requirements COVERED.
+
+Coverage summary:
+- STORE-01: `readBuffer returns entries in seq order after writes`
+- STORE-02 + STORE-05: `enforces cap: returns { overflow: true } when count exceeds cap after insert`
+- STORE-03 + STORE-06: `deletes entries older than RELAY_BUFFER_TTL_MS via findMany + deleteMany` (+ dryRun and empty-candidates paths)
+- STORE-04: `ackBuffer calls deleteMany with seq <= ackedSeq`
+- STORE-07: `returns { overflow: false } without DB call for non-user-scoped connectionKey` (machine-scoped + session-scoped)
