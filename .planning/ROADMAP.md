@@ -130,8 +130,8 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Add 4 Prometheus counters to metrics2.ts; wire call sites in unackedBuffer.ts and resilienceHandler.ts; add SocketCollector.on()/off() to testkit
-- [ ] 10-02-PLAN.md — Create docs/android-doze-qa-checklist.md with 3 scenarios (Background/ack-flush, Foreground/reconnect, Doze/socket-resurrection); link from PROTOCOL_CHANGES.md
+- [x] 10-01-PLAN.md — Add 4 Prometheus counters to metrics2.ts; wire call sites in unackedBuffer.ts and resilienceHandler.ts; add SocketCollector.on()/off() to testkit
+- [x] 10-02-PLAN.md — Create docs/android-doze-qa-checklist.md with 3 scenarios (Background/ack-flush, Foreground/reconnect, Doze/socket-resurrection); link from PROTOCOL_CHANGES.md
 - [ ] 10-03-PLAN.md — E2E test: reconnect.resilience.e2e.test.ts asserting reconnect-resume payload, replay-complete receipt, and zero duplicate seqs
 - [ ] 10-04-PLAN.md — WAL contention stress test: buffer.walContention.stress.test.ts with 200 concurrent writes via Promise.all
 
