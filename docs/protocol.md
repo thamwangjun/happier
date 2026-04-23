@@ -229,6 +229,13 @@ Payload: `AckUpdateRequestSchema` from `@happier-dev/protocol`
 
 ### Server → client events
 
+#### `replay-start`
+Emitted by the server immediately before it begins replaying buffered messages,
+when the buffer is non-empty. The payload carries `retentionStart` so the client
+can perform gap detection before the first replayed message arrives (MOB-09 / SRVR-10).
+
+Payload: `{ retentionStart: number }` — the oldest `seq` currently in the buffer.
+
 #### `replay-complete`
 Emitted by the server in all reconnect paths: after the last buffered message is sent,
 after `buffer-overflow` is signalled, or immediately if the buffer is empty.
@@ -250,6 +257,15 @@ No payload.
 The existing `update` event envelope (`UpdateContainerSchema`) gains an optional field:
 - `ackSeq?: number` — server-side ack hint piggybacked on outbound payloads. Clients
   that omit or ignore this field are fully backward compatible.
+
+### Server operator configuration
+
+These environment variables tune the relay buffer. Both are optional; defaults are production-safe.
+
+| Env var | Default | Description |
+|---------|---------|-------------|
+| `RELAY_BUFFER_CAP` | `500` | Maximum number of unacked messages buffered per user connection. When the cap is reached, incoming messages overflow and a `buffer-overflow` event is sent to the next reconnecting client. |
+| `RELAY_BUFFER_TTL_MS` | `120000` (2 min) | TTL in milliseconds after which un-acked buffer entries are pruned by the retention rule. Prevents unbounded growth when a client never reconnects. |
 
 ### Client constants
 
