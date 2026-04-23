@@ -98,6 +98,14 @@ export class SocketCollector {
   emit(event: string, data: unknown): void {
     this.socket.emit(event as any, data);
   }
+
+  on(event: string, listener: (...args: unknown[]) => void): void {
+    this.socket.on(event as any, listener as any);
+  }
+
+  off(event: string, listener: (...args: unknown[]) => void): void {
+    this.socket.off(event as any, listener as any);
+  }
 }
 
 export function createUserScopedSocketCollector(baseUrl: string, token: string): SocketCollector {

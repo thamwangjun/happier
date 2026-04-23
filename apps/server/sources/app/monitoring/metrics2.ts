@@ -79,6 +79,30 @@ export const catchupFollowupReturnedCounter = new Counter({
     registers: [register]
 });
 
+export const bufferWritesTotal = new Counter({
+    name: 'buffer_writes_total',
+    help: 'Total UnackedMessageBuffer write operations',
+    registers: [register]
+});
+
+export const bufferAcksTotal = new Counter({
+    name: 'buffer_acks_total',
+    help: 'Total UnackedMessageBuffer ack operations',
+    registers: [register]
+});
+
+export const bufferRedeliveriesTotal = new Counter({
+    name: 'buffer_redeliveries_total',
+    help: 'Total messages redelivered from buffer on reconnect',
+    registers: [register]
+});
+
+export const dedupDropsTotal = new Counter({
+    name: 'dedup_drops_total',
+    help: 'Total duplicate messages detected and dropped during reconnect replay',
+    registers: [register]
+});
+
 export const httpRequestsCounter = new Counter({
     name: 'http_requests_total',
     help: 'Total number of HTTP requests',
