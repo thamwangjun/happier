@@ -433,17 +433,19 @@ Per CONTEXT.md specifics: include ADB commands for Doze simulation in the checkl
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **dedup_drops_total exact semantics**
    - What we know: D-05 says "called from `resilienceHandler.ts` when a duplicate seq is detected and dropped"; SRVR-08 covers idempotent ack
    - What's unclear: Whether "dedup drop" means (a) ack-update for already-cleared seq, or (b) message in buffer with seq <= lastAckedSeq at reconnect time (already filtered by readBuffer), or (c) a new detection path to be added
    - Recommendation: Implementer should read D-05 literally: add detection in the `reconnect-resume` handler to count buffer entries that exist in the DB for `seq <= lastAckedSeq` (messages that were buffered but client already had) — these are the "would-be duplicates" the server saves the client from receiving. Alternatively, treat every idempotent ack-update as a dedup drop. Either reading satisfies the REQUIREMENTS.md spec.
+   - **RESOLVED:** Plan 10-01 Task 2 uses `db.unackedMessage.count({ where: { userId, connectionKey, seq: { lte: lastAckedSeq } } })` in the `reconnect-resume` handler to count would-be duplicates, then calls `dedupDropsTotal.inc({ count })`. This counts messages the buffer held that the client already acknowledged — the server "deduplication" saves the client from receiving them again.
 
 2. **SocketCollector resilience event access**
    - What we know: `socket` is `private`; `SocketCollector.emit(event, data)` works for outbound; no inbound listener API beyond `getEvents()` (which doesn't capture resilience events)
    - What's unclear: Whether the preferred solution is to add `on()`/`off()` to `SocketCollector` or use option 2 (raw socket + constructor injection)
    - Recommendation: Add `on(event, listener)` and `off(event, listener)` to `SocketCollector` in `socketClient.ts` — consistent with existing `onRpcRequest` pattern, reusable for future resilience tests, minimal change.
+   - **RESOLVED:** Plan 10-01 Task 3 adds `on(event: string, listener: (...args: unknown[]) => void): void` and `off(event: string, listener: (...args: unknown[]) => void): void` pass-through methods to `SocketCollector`, delegating to `(this.socket as any).on(event, listener)` following the existing `onRpcRequest` cast convention.
 
 ---
 
