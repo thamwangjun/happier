@@ -56,7 +56,7 @@
 
 - [x] **VALID-01**: E2E test passes: CLI sends a sequence of messages → mobile socket drops mid-stream → mobile reconnects → all messages are present exactly once
 - [x] **VALID-02**: Relay exposes Prometheus counters: `buffer_writes_total`, `buffer_acks_total`, `buffer_redeliveries_total`, `dedup_drops_total`
-- [x] **VALID-03**: Load test validates SQLite WAL contention under high-frequency transcript streaming with the `UnackedMessageBuffer` active
+- [x] **VALID-03**: Load test validates connection pool saturation under high-frequency transcript streaming — 200 concurrent `writeToBuffer` calls via `Promise.all` (`buffer.walContention.stress.test.ts`)
 - [x] **VALID-04**: Manual Android Doze QA checklist is documented and executed on a physical device
 
 ---
