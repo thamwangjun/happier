@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Request Resilience
-status: milestone_complete
-stopped_at: Phase 10 context gathered
-last_updated: "2026-04-23T11:02:32.947Z"
-last_activity: 2026-04-23 -- Phase --phase execution started
+status: completed
+stopped_at: Phase 12 context gathered
+last_updated: "2026-04-23T13:30:25.954Z"
+last_activity: 2026-04-23
 progress:
   total_phases: 6
   completed_phases: 6
   total_plans: 19
-  completed_plans: 16
+  completed_plans: 19
   percent: 100
 ---
 
@@ -56,6 +56,10 @@ Progress: [          ] 0% (0/5 phases complete)
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 12 added: Address remaining v1.3 audit items — wire shouldHoldServerCommit into production code, guard writeToBuffer for non-user-scoped connections, clean up inert ackSeq comment, document VALID-04 Android Doze results
+
 ### Decisions
 
 - **Data model:** Two-model design (`UnackedMessage` + `ClientAckState`) chosen over single `RetainedMessage` — separates buffer state from ack cursor state, handles multi-process correctly
@@ -100,5 +104,5 @@ Progress: [          ] 0% (0/5 phases complete)
 ## Session Continuity
 
 Last session: --stopped-at
-Stopped at: Phase 10 context gathered
+Stopped at: Phase 12 context gathered
 Resume file: --resume-file
