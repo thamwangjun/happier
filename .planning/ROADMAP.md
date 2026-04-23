@@ -112,9 +112,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — TDD RED: write all failing tests for MOB-01 through MOB-10 in engine/resilience/*.spec.ts with stubs
-- [ ] 09-02-PLAN.md — TDD GREEN core: implement dedupFilter.ts, ackCursorManager.ts, replayGate.ts and extend persistence.ts with loadLastAckedSeq/saveLastAckedSeq
-- [ ] 09-03-PLAN.md — TDD GREEN integration: wire resilience module into apiSocket.ts, sync.ts, and pendingQueueV2.ts; full suite GREEN
+- [x] 09-01-PLAN.md — TDD RED: write all failing tests for MOB-01 through MOB-10 in engine/resilience/*.spec.ts with stubs
+- [x] 09-02-PLAN.md — TDD GREEN core: implement dedupFilter.ts, ackCursorManager.ts, replayGate.ts and extend persistence.ts with loadLastAckedSeq/saveLastAckedSeq
+- [x] 09-03-PLAN.md — TDD GREEN integration: wire resilience module into apiSocket.ts, sync.ts, and pendingQueueV2.ts; full suite GREEN
 
 ---
 
