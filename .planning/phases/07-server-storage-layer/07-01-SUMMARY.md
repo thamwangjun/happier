@@ -43,6 +43,12 @@ metrics:
   completed: "2026-04-22"
   tasks_completed: 3
   files_changed: 5
+requirements-completed:
+  - STORE-01
+  - STORE-02
+  - STORE-04
+  - STORE-05
+  - STORE-07
 ---
 
 # Phase 07 Plan 01: Server Storage Layer RED Phase Summary

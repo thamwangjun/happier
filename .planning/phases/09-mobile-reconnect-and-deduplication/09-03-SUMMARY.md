@@ -52,7 +52,16 @@ patterns-established:
   - "Replay gate pattern: set isReplaying=true on reconnect, clear only on REPLAY_COMPLETE, drain waiters with drainReplayCompleteWaiters()"
   - "Optional replayGate parameter on enqueuePendingMessageV2 — backward-compatible, undefined means no gating"
 
-requirements-completed: [MOB-01, MOB-05, MOB-06, MOB-07, MOB-08, MOB-09, MOB-10]
+requirements-completed:
+  - MOB-01
+  - MOB-02
+  - MOB-03
+  - MOB-05
+  - MOB-06
+  - MOB-07
+  - MOB-08
+  - MOB-09
+  - MOB-10
 
 # Metrics
 duration: 25min

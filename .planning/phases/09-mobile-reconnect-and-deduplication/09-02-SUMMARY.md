@@ -43,6 +43,9 @@ key-decisions:
   - "saveLastAckedSeq uses merge-write (not replace) — preserves other accounts' data in the shared MMKV blob"
   - "loadLastAckedSeq returns 0 for absent/invalid data — safe default triggers full replay rather than silently dropping messages (T-09B-04 mitigation)"
 
+requirements-completed:
+  - MOB-04
+
 # Metrics
 duration: 15min
 completed: 2026-04-22

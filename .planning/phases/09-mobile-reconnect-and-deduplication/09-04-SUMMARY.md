@@ -21,6 +21,9 @@ metrics:
   completed: "2026-04-23"
   tasks_completed: 2
   files_modified: 1
+requirements-completed:
+  - MOB-02
+  - MOB-03
 ---
 
 # Phase 9 Plan 04: Wire MOB-02/MOB-03 Gap Closure into sync.ts Summary

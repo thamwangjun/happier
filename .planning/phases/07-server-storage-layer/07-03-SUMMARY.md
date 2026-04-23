@@ -36,6 +36,9 @@ metrics:
   completed: "2026-04-22"
   tasks_completed: 2
   files_changed: 2
+requirements-completed:
+  - STORE-03
+  - STORE-06
 ---
 
 # Phase 07 Plan 03: Retention Rule GREEN Phase Summary
