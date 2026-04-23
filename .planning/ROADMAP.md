@@ -32,7 +32,7 @@
 - [x] **Phase 8: Server Socket Integration** - Socket handlers for reconnect-resume and ack-update wired into the live emit path, with integration tests in both storage modes (completed 2026-04-22)
 - [x] **Phase 9: Mobile Reconnect and Deduplication** - Mobile client emits reconnect-resume, deduplicates replayed messages, persists ack cursor, and gates outbound queue during replay (completed 2026-04-23)
 - [x] **Phase 10: E2E Validation and Hardening** - End-to-end test, Prometheus counters, SQLite load test, and Android Doze QA checklist (completed 2026-04-23)
-- [ ] **Phase 11: Tech Debt Cleanup** - Close documentation, traceability, and test quality gaps identified in the v1.3 milestone audit
+- [x] **Phase 11: Tech Debt Cleanup** - Close documentation, traceability, and test quality gaps identified in the v1.3 milestone audit (completed 2026-04-23)
 
 ## Phase Details
 
@@ -151,9 +151,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Update REQUIREMENTS.md checkboxes (32 pending → complete), fix SUMMARY.md frontmatter for Phases 7/8/9, update ROADMAP.md progress table
-- [ ] 11-02-PLAN.md — Refactor SRVR-01 integration test to bypass vi.mock hoisting: assert writeToBuffer directly, confirm test passes
-- [ ] 11-03-PLAN.md — Update docs/protocol.md replay-complete payload shape; fix VALID-03 REQ description naming mismatch
+- [x] 11-01-PLAN.md — Update REQUIREMENTS.md checkboxes (32 pending → complete), fix SUMMARY.md frontmatter for Phases 7/8/9, update ROADMAP.md progress table
+- [x] 11-02-PLAN.md — Refactor SRVR-01 integration test to bypass vi.mock hoisting: assert writeToBuffer directly, confirm test passes
+- [x] 11-03-PLAN.md — Update docs/protocol.md replay-complete payload shape; fix VALID-03 REQ description naming mismatch
 
 ---
 
@@ -171,4 +171,4 @@ Plans:
 | 8. Server Socket Integration | v1.3 | 2/2 | Complete | 2026-04-22 |
 | 9. Mobile Reconnect and Deduplication | v1.3 | 3/3 | Complete | 2026-04-23 |
 | 10. E2E Validation and Hardening | v1.3 | 4/4 | Complete | 2026-04-23 |
-| 11. Tech Debt Cleanup | v1.3 | 0/3 | Not started | - |
+| 11. Tech Debt Cleanup | v1.3 | 3/3 | Complete    | 2026-04-23 |
