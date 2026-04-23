@@ -12,3 +12,5 @@ See [docs/protocol.md § v1.3 Resilience Events](./protocol.md#v13-resilience-ev
 - `replay-complete` and `buffer-overflow` server→client events
 - `ackSeq` optional field added to the update envelope (`UpdateContainerSchema`)
 - `ACK_DEBOUNCE_MS = 500` constant exported from `@happier-dev/protocol`
+
+**Manual QA:** See [Android Doze QA Checklist](./android-doze-qa-checklist.md) for physical device validation of MOB-05 (ack flush on background), MOB-06 (reconnect on foreground), and Doze socket resurrection.
