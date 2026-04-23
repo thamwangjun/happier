@@ -24,7 +24,12 @@ export function resilienceHandler(userId: string, socket: Socket): void {
     socket.on(SOCKET_RESILIENCE_EVENTS.RECONNECT_RESUME, async (data: unknown) => {
         try {
             const parsed = ReconnectResumeRequestSchema.safeParse(data);
-            if (!parsed.success) return;
+            if (!parsed.success) {
+                log({ module: 'resilience', level: 'warn' }, `reconnect-resume parse error for user ${userId}: ${parsed.error.message}`);
+                // Unblock the client gate so it doesn't hang.
+                socket.emit(SOCKET_RESILIENCE_EVENTS.REPLAY_COMPLETE, { retentionStart: null });
+                return;
+            }
 
             const { lastAckedSeq } = parsed.data;
             const connectionKey = `user-scoped:${userId}`;
@@ -56,9 +61,15 @@ export function resilienceHandler(userId: string, socket: Socket): void {
             socket.emit(SOCKET_RESILIENCE_EVENTS.REPLAY_START, { retentionStart });
 
             // Gap detection for overflow signal (SRVR-09):
-            // If the oldest buffered seq is not contiguous with lastAckedSeq, the
-            // buffer was trimmed — equivalent to overflow from the client's perspective.
-            const hasGap = retentionStart !== null && retentionStart > lastAckedSeq + 1;
+            // Query the absolute minimum seq across ALL buffer entries (not just those above
+            // lastAckedSeq) to avoid false overflow signals when lastAckedSeq+1 was delivered
+            // live and never written to the buffer.
+            const absoluteMin = await db.unackedMessage.findFirst({
+                where: { userId, connectionKey },
+                orderBy: { seq: 'asc' },
+                select: { seq: true },
+            });
+            const hasGap = absoluteMin !== null && absoluteMin.seq > lastAckedSeq + 1;
             if (hasGap) {
                 // Path 2: signal overflow (SRVR-09); client will trigger resumeViaChanges.
                 // INTENTIONAL: we continue to replay all buffered messages even after emitting
@@ -85,7 +96,10 @@ export function resilienceHandler(userId: string, socket: Socket): void {
     socket.on(SOCKET_RESILIENCE_EVENTS.ACK_UPDATE, async (data: unknown) => {
         try {
             const parsed = AckUpdateRequestSchema.safeParse(data);
-            if (!parsed.success) return;
+            if (!parsed.success) {
+                log({ module: 'resilience', level: 'warn' }, `ack-update parse error for user ${userId}: ${parsed.error.message}`);
+                return;
+            }
 
             const { seq } = parsed.data;
             const connectionKey = `user-scoped:${userId}`;
