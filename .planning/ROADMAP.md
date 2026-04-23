@@ -31,7 +31,7 @@
 - [ ] **Phase 7: Server Storage Layer** - Server-side unacked message buffer with cap, TTL, ack discard, overflow signal, and CLI exclusion
 - [ ] **Phase 8: Server Socket Integration** - Socket handlers for reconnect-resume and ack-update wired into the live emit path, with integration tests in both storage modes
 - [ ] **Phase 9: Mobile Reconnect and Deduplication** - Mobile client emits reconnect-resume, deduplicates replayed messages, persists ack cursor, and gates outbound queue during replay
-- [ ] **Phase 10: E2E Validation and Hardening** - End-to-end test, Prometheus counters, SQLite load test, and Android Doze QA checklist
+- [x] **Phase 10: E2E Validation and Hardening** - End-to-end test, Prometheus counters, SQLite load test, and Android Doze QA checklist (completed 2026-04-23)
 
 ## Phase Details
 
@@ -150,4 +150,4 @@ Plans:
 | 7. Server Storage Layer | v1.3 | 0/3 | Not started | - |
 | 8. Server Socket Integration | v1.3 | 0/2 | Not started | - |
 | 9. Mobile Reconnect and Deduplication | v1.3 | 0/3 | Not started | - |
-| 10. E2E Validation and Hardening | v1.3 | 0/4 | Not started | - |
+| 10. E2E Validation and Hardening | v1.3 | 4/4 | Complete    | 2026-04-23 |

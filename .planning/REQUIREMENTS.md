@@ -54,10 +54,10 @@
 
 ### E2E Validation and Hardening
 
-- [ ] **VALID-01**: E2E test passes: CLI sends a sequence of messages → mobile socket drops mid-stream → mobile reconnects → all messages are present exactly once
-- [ ] **VALID-02**: Relay exposes Prometheus counters: `buffer_writes_total`, `buffer_acks_total`, `buffer_redeliveries_total`, `dedup_drops_total`
-- [ ] **VALID-03**: Load test validates SQLite WAL contention under high-frequency transcript streaming with the `UnackedMessageBuffer` active
-- [ ] **VALID-04**: Manual Android Doze QA checklist is documented and executed on a physical device
+- [x] **VALID-01**: E2E test passes: CLI sends a sequence of messages → mobile socket drops mid-stream → mobile reconnects → all messages are present exactly once
+- [x] **VALID-02**: Relay exposes Prometheus counters: `buffer_writes_total`, `buffer_acks_total`, `buffer_redeliveries_total`, `dedup_drops_total`
+- [x] **VALID-03**: Load test validates SQLite WAL contention under high-frequency transcript streaming with the `UnackedMessageBuffer` active
+- [x] **VALID-04**: Manual Android Doze QA checklist is documented and executed on a physical device
 
 ---
 
@@ -116,7 +116,7 @@
 | MOB-08 | Phase 9 | Pending |
 | MOB-09 | Phase 9 | Pending |
 | MOB-10 | Phase 9 | Pending |
-| VALID-01 | Phase 10 | Pending |
-| VALID-02 | Phase 10 | Pending |
-| VALID-03 | Phase 10 | Pending |
-| VALID-04 | Phase 10 | Pending |
+| VALID-01 | Phase 10 | Complete |
+| VALID-02 | Phase 10 | Complete |
+| VALID-03 | Phase 10 | Complete |
+| VALID-04 | Phase 10 | Complete |
