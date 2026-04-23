@@ -240,7 +240,7 @@ export const UpdateContainerSchema = z.object({
   seq: z.number().int().min(0),
   createdAt: TimestampMsSchema,
   body: UpdateBodySchema,
-  ackSeq: z.number().int().min(0).optional(),
+  ackSeq: z.number().int().min(0).optional(), // Reserved for future piggybacking (PROTO-04) — parsed but not consumed by any production code.
 }).passthrough();
 
 export type UpdateContainer = z.infer<typeof UpdateContainerSchema>;
