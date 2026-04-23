@@ -203,6 +203,7 @@ import {
 import { SOCKET_RESILIENCE_EVENTS } from '@happier-dev/protocol';
 import { createReplayGate, type ReplayGate } from '@/sync/engine/resilience/replayGate';
 import { createAckFlushState, flushAckUpdateNow, type AckFlushState } from '@/sync/engine/resilience/ackCursorManager';
+import { shouldApplyUpdate } from '@/sync/engine/resilience/dedupFilter';
 
 const SESSION_MESSAGES_PAGE_SIZE = 150;
 
@@ -3510,6 +3511,10 @@ class Sync {
     }
 
     private handleUpdate = async (update: unknown) => {
+          const container = parseUpdateContainer(update);
+          if (container !== null && container.seq > 0 && !shouldApplyUpdate(container.seq, this.lastAckedSeq)) {
+              return; // MOB-02: discard duplicate seq — already applied
+          }
           await handleSocketUpdate({
               update,
               encryption: this.encryption,
