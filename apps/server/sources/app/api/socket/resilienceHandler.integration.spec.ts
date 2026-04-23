@@ -23,7 +23,7 @@ vi.mock("@/app/events/connectionEventRouter", () => ({
 // --- DB mock setup (for writeToBuffer's inTx, used in SRVR-01 test) ---
 
 const { db, reset: resetDbMocks } = createDbMocks({
-    unackedMessage: ["findMany", "deleteMany", "create", "count"],
+    unackedMessage: ["findMany", "deleteMany", "create", "count", "findFirst"],
 } as const);
 
 const txMock = createDbTransactionMock(() => ({
@@ -32,6 +32,7 @@ const txMock = createDbTransactionMock(() => ({
         count: db.unackedMessage.count,
         findMany: db.unackedMessage.findMany,
         deleteMany: db.unackedMessage.deleteMany,
+        findFirst: db.unackedMessage.findFirst,
     },
 }));
 
@@ -61,6 +62,8 @@ describe("resilienceHandler", async () => {
         writeToBufferMock.mockResolvedValue({ overflow: false });
         readBufferMock.mockResolvedValue([]);
         ackBufferMock.mockResolvedValue(undefined);
+        // Default: no gap (absoluteMin=null → hasGap=false); override per-test when gap detection is needed.
+        db.unackedMessage.findFirst.mockResolvedValue(null);
     });
 
     describe("SRVR-02, SRVR-04: reconnect-resume replays buffered messages in seq order (SQLite mode)", () => {
@@ -118,10 +121,11 @@ describe("resilienceHandler", async () => {
 
     describe("SRVR-09 path 2 + SRVR-10: buffer-overflow emitted when gap detected", () => {
         it("emits buffer-overflow then replay-complete when retentionStart > lastAckedSeq + 1", async () => {
-            // lastAckedSeq=0, retentionStart=5 — gap of 4 — overflow signal
+            // lastAckedSeq=0, absoluteMin.seq=5 → gap of 4 → overflow signal
             const p5 = makePayload(5);
             const p6 = makePayload(6);
             readBufferMock.mockResolvedValue([p5, p6]);
+            db.unackedMessage.findFirst.mockResolvedValue({ seq: 5 });
 
             const socket = createFakeSocket();
             resilienceHandler("user-1", socket as any);
@@ -194,6 +198,7 @@ describe("SRVR-01: emitUpdate() writes to buffer fire-and-forget", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        resetDbMocks();
         writeToBufferMock.mockResolvedValue({ overflow: false });
     });
 
@@ -221,8 +226,13 @@ describe("SRVR-01: emitUpdate() writes to buffer fire-and-forget", () => {
     });
 });
 
-describe.skipIf(skipRedis)("SRVR-05: Postgres/Redis mode — same replay behavior", async () => {
-    const { resilienceHandler } = await import("./resilienceHandler");
+describe.skipIf(skipRedis)("SRVR-05: Postgres/Redis mode — same replay behavior", () => {
+    let resilienceHandler: typeof import("./resilienceHandler")["resilienceHandler"];
+
+    beforeAll(async () => {
+        const mod = await import("./resilienceHandler");
+        resilienceHandler = mod.resilienceHandler;
+    });
 
     beforeEach(() => {
         vi.clearAllMocks();
