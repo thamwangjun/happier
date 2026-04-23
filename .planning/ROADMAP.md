@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MCP Tool Configuration** — Phases 1-3 (shipped 2026-04-19)
 - ✅ **v1.1 Distinguish Parent vs Subagent Turn Completion** — Phases 4-5 (shipped 2026-04-20)
-- **v1.3 Request Resilience** — Phases 6-11 (active)
+- **v1.3 Request Resilience** — Phases 6-12 (active)
 
 ## Phases
 
@@ -157,6 +157,18 @@ Plans:
 
 ---
 
+### Phase 12: Address Remaining v1.3 Audit Items
+**Goal**: The four remaining v1.3 milestone tech debt items are closed — shouldHoldServerCommit is wired into production code, writeToBuffer guard is verified complete, ackSeq field is annotated, and VALID-04 Android Doze is acknowledged as leave-as-is
+**Depends on**: Phase 11
+**Requirements**: MOB-07, WR-03, PROTO-04, VALID-04
+**Plans**: 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Wire shouldHoldServerCommit into pendingQueueV2.ts replacing direct isReplaying field access (MOB-07)
+- [ ] 12-02-PLAN.md — Add PROTO-04 ackSeq comment, verify WR-03 writeToBuffer guard, close VALID-04 in audit (PROTO-04, WR-03, VALID-04)
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -171,4 +183,5 @@ Plans:
 | 8. Server Socket Integration | v1.3 | 2/2 | Complete | 2026-04-22 |
 | 9. Mobile Reconnect and Deduplication | v1.3 | 3/3 | Complete | 2026-04-23 |
 | 10. E2E Validation and Hardening | v1.3 | 4/4 | Complete | 2026-04-23 |
-| 11. Tech Debt Cleanup | v1.3 | 3/3 | Complete    | 2026-04-23 |
+| 11. Tech Debt Cleanup | v1.3 | 3/3 | Complete | 2026-04-23 |
+| 12. Address Remaining v1.3 Audit Items | v1.3 | 0/2 | In Progress | — |
