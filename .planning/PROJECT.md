@@ -208,4 +208,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 — Phase 06 (Protocol Contract) complete*
+*Last updated: 2026-04-23 — Phase 10 (E2E Validation & Hardening) complete — v1.3 Request Resilience milestone all phases done. Android Doze physical device testing deferred to future E2E milestone; see `docs/deferred-e2e-validation.md`.*
