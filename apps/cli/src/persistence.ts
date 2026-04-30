@@ -113,7 +113,7 @@ export interface Settings {
   /**
    * Per-tool session-agent enable/disable configuration (CLI-local; schema-validated).
    * Parsed/normalized by `settings/sessionAgentToolsSettings.ts`.
-   * Stored as raw JSON — always access via `readSessionAgentToolsSettingsV1(settings)`.
+   * Stored as raw JSON — always access via `readSessionAgentToolsSettings(settings)`.
    */
   sessionAgentToolsSettingsV1?: unknown;
 }
@@ -144,7 +144,7 @@ const defaultSettings: Settings = {
  * Migrate settings from old schema versions to current
  * Always backwards compatible - preserves all data
  */
-function migrateSettings(raw: any, fromVersion: number): any {
+function migrateSettings(raw: Record<string, unknown>, fromVersion: number): Record<string, unknown> {
   let migrated = { ...raw };
 
   // Migration from v2 to v3 (removed CLI-local env cache)
@@ -432,7 +432,9 @@ export async function updateSettings(
           if (Date.now() - stats.mtimeMs > STALE_LOCK_TIMEOUT_MS) {
             await unlink(lockFile).catch(() => { });
           }
-        } catch { }
+        } catch (err) {
+            logger.debug('[updateSettings] Could not stat lock file during stale-lock check:', err);
+        }
       } else {
         throw err;
       }
@@ -844,11 +846,15 @@ export async function acquireDaemonLock(
 export async function releaseDaemonLock(lockHandle: FileHandle): Promise<void> {
   try {
     await lockHandle.close();
-  } catch { }
+  } catch (err) {
+    logger.debug('[releaseDaemonLock] Error closing lock handle:', err);
+  }
 
   try {
     if (existsSync(configuration.daemonLockFile)) {
       unlinkSync(configuration.daemonLockFile);
     }
-  } catch { }
+  } catch (err) {
+    logger.debug('[releaseDaemonLock] Error removing daemon lock file:', err);
+  }
 }

@@ -114,12 +114,19 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tauri macOS/Windows desktop app (wrapping Expo web export) — existing
 - ✓ Desktop auto-updater — existing
 
-**Turn Completion Distinction (v1.1)**
+**Turn Completion Distinction (v1.1, shipped 2026-04-20)**
 - ✓ Two-function split: `finalizeCurrentTurn()` (parent path, Phase A + Phase B) and `finalizeSubagentTurn()` (subagent path, Phase A only) in `claudeRemoteAgentSdk.ts` — v1.1
 - ✓ Phase A bookkeeping (`activeTaskId = null`, `updateThinking(false)`, transcript flush) runs on both parent and subagent paths — v1.1
 - ✓ Phase B notification (`opts.onReady()`, `scheduleNextMessagePump()`) suppressed on subagent path — v1.1
 - ✓ `messageQueue.flush()` in `onReady` lambda runs unconditionally; only `readyHandler()` is gated — v1.1
 - ✓ TURN-06: subagent completion followed by parent completion fires exactly one `ready` event — v1.1
+
+**Global Default (v1.1, Phases 4-5 — Shipped 2026-04-22)**
+- ✓ `default?: boolean` field added to `SessionAgentToolsSettingsSchema` (Zod, optional, no `.default()`) — v1.1
+- ✓ 3-level predicate: per-tool entry → `settings.default` → `true` fallback — v1.1
+- ✓ V1 TypeScript identifiers renamed to un-versioned form (JSON key preserved for backward compat) — v1.1
+- ✓ 26 unit tests pass (TEST-01..04 covering all 3-level lookup scenarios); tsc --noEmit exits 0 — v1.1
+- ✓ `docs/mcp-tool-filtering.md` updated with Example E opt-in mode pattern and corrected stale V1 references — v1.1
 
 **MCP Tool Configuration (v1.0)**
 - ✓ `sessionAgentToolsSettingsV1` settings schema: per-tool enable/disable in `~/.happier-dev/settings.json`, opt-out model, no-throw reader — v1.0
@@ -127,17 +134,18 @@ A developer can start an AI coding session on their machine and seamlessly conti
 - ✓ Tool registration filter: absent or missing key defaults to `enabled: true`; corrupt config falls back to all-tools-enabled with `logger.warn` — v1.0
 - ✓ Validation feedback: `findUnknownSessionAgentToolNames` warns on unrecognized tool names at startup without affecting valid entries — v1.0
 
-### Active
+## Active
 
-*(No active requirements — planning next milestone)*
+*(none — planning next milestone)*
 
-### Out of Scope
+## Out of Scope
 
 - Per-project `.mcp.json` overrides (deferred — user-global settings first)
 - Remote/server-side tool configuration
-- UI for editing MCP tool settings (hand-edit only for v1.0)
+- UI for editing settings (hand-edit only)
 - `isSubagent` flag parameter on `finalizeCurrentTurn()` — replaced by two-function split (cleaner API) — v1.1
-- `resetTurnDiagnostics()` subagent gating — deferred; `didFlushTranscriptCleanly` advisory issued but full-turn diagnostics gate not needed for v1.1
+- `resetTurnDiagnostics()` subagent gating — deferred; `didFlushTranscriptCleanly` advisory issued — v1.1
+- Per-backend `default` (different defaults per AI provider) — not needed; single global default sufficient
 
 ## Context
 
@@ -172,6 +180,10 @@ A developer can start an AI coding session on their machine and seamlessly conti
 | Two-function split (`finalizeCurrentTurn` + `finalizeSubagentTurn`) over `isSubagent` flag | Eliminates flag argument anti-pattern; each function has a single, clear responsibility | ✓ Good — v1.1 |
 | `didFlushTranscriptCleanly` flag to suppress redundant flush on clean turn-end | Required to make TEST-03 green without modifying test mocks; avoids double-flush side effect | ✓ Good — v1.1 |
 | TDD RED→GREEN for turn completion split | Contract established in failing tests before implementation; prevented scope creep and caught TEST-03a double-flush early | ✓ Good — v1.1 |
+| `z.boolean().optional()` without `.default()` for `default` field | Absence is distinguishable from explicit `true` at predicate level — enables clean 3-level fallback | ✓ Good — v1.1 |
+| Predicate fallback `?? true` not `?? false` | Backward-compatible opt-out for all existing users without a `default` field | ✓ Good — v1.1 |
+| JSON key `sessionAgentToolsSettingsV1` not renamed in settings.json | Only TypeScript identifiers renamed; settings file format unchanged for backward compat | ✓ Good — v1.1 |
+| 3-level lookup tests as sibling `describe` block (not nested) | Explicit requirement traceability (TEST-01..04 labels) without restructuring existing test suite | ✓ Good — v1.1 |
 
 ## Evolution
 
@@ -191,4 +203,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v1.1 milestone — Distinguish Parent vs Subagent Turn Completion shipped*
+*Last updated: 2026-04-22 after v1.1 milestone — Session Agent Tools Global Default shipped. Planning next milestone.*

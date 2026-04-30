@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: Distinguish Parent vs Subagent Turn Completion
-status: complete
-stopped_at: Milestone v1.1 shipped
-last_updated: "2026-04-20T08:30:00.000Z"
-last_activity: 2026-04-20
+milestone_name: Session Agent Tools — Global Default
+status: milestone_archived
+stopped_at: Milestone v1.1 archived — planning next milestone
+last_updated: "2026-04-22T12:45:00.000Z"
+last_activity: 2026-04-22 -- Milestone v1.1 archived (10/10 requirements, 2 phases, 2 plans)
 progress:
   total_phases: 2
   completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 2
+  completed_plans: 2
   percent: 100
 ---
 
@@ -18,17 +18,16 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-20)
+See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Control AI coding agent sessions remotely from any device, with end-to-end encryption.
-**Current focus:** Planning next milestone
+**Current focus:** Planning next milestone — run `/gsd-new-milestone` to start
 
 ## Current Position
 
-Phase: —
-Plan: —
-Status: Milestone v1.1 complete — planning next milestone
-Last activity: 2026-04-20
+Phase: — (all phases complete)
+Status: Milestone v1.1 archived
+Last activity: 2026-04-22
 
 Progress: [██████████] 100%
 
@@ -36,16 +35,18 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 3
-- Average duration: ~12 min/plan
-- Total execution time: ~36 min (Phase 4: ~24 min, Phase 5: ~12 min)
+- Total plans completed: 3 (v1.1)
+- Average duration: 15 min
+- Total execution time: 15 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 04 | 2 | ~24 min | ~12 min |
-| 05 | 1 | ~12 min | ~12 min |
+| 04 schema-predicate | 1 | 15 min | 15 min |
+| 05 | 1 | - | - |
+
+**Recent Trend:** —
 
 *Updated after each plan completion*
 
@@ -54,6 +55,11 @@ Progress: [██████████] 100%
 ### Decisions
 
 All v1.1 decisions captured in PROJECT.md Key Decisions table.
+
+Recent decisions affecting current work:
+
+- v1.1: Schema lives in `apps/cli/src/settings/` only (no protocol package change needed)
+- v1.1: Lookup order is per-tool entry → `default` → `true` (backward compatible)
 
 ### Pending Todos
 
@@ -77,11 +83,10 @@ All v1.1 decisions captured in PROJECT.md Key Decisions table.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Future refactor | Dedicated subagent handler (Codex-style) if agent-teams becomes primary | Deferred | v1.1 |
-| Future decision | `resetTurnDiagnostics()` scope: gate behind !isSubagent for full-turn diagnostics | Deferred | v1.1 |
+| *(none)* | | | |
 
 ## Session Continuity
 
-Last session: 2026-04-20
-Stopped at: Milestone v1.1 complete
-Resume file: Run /gsd-new-milestone to start next milestone
+Last session: 2026-04-22
+Stopped at: Milestone v1.1 archived — run /gsd-new-milestone to start next milestone
+Resume file: None

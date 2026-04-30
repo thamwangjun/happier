@@ -40,8 +40,9 @@ Field reference:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `v` | `1` (literal) | Yes | Schema version. Must be `1`. |
+| `v` | `1` (literal) | No (defaults to `1`) | Schema version. Omitting is allowed; the CLI will insert `1` automatically. |
 | `tools` | object | No | Map of tool name → `{ "enabled": boolean }`. An empty object (or omitting the key entirely) enables all tools. |
+| `default` | `boolean` | No | Global enabled/disabled baseline for all unconfigured tools. Omitting this field preserves the default opt-out behaviour (all tools enabled). |
 
 ### Default behavior (opt-out model)
 
@@ -148,6 +149,28 @@ Run the session agent with no Happier built-in tools exposed — useful for lock
 }
 ```
 
+> **Note:** This list is provided for reference only. If a tool name is renamed or removed, the daemon emits a `logger.warn` at startup for unrecognised names but continues normally. Use `happier tools list` (if available) to get the current catalog.
+
+#### Example E — Opt-in mode (allow only specific tools)
+
+To restrict the session agent to a small explicit allowlist, set `"default": false` to disable all tools by default, then selectively re-enable only the tools you need. Any tool without an explicit `"enabled": true` entry will be blocked:
+
+```json
+{
+  "sessionAgentToolsSettingsV1": {
+    "v": 1,
+    "default": false,
+    "tools": {
+      "session_status_get": { "enabled": true },
+      "session_history_get": { "enabled": true },
+      "session_messages_recent_get": { "enabled": true }
+    }
+  }
+}
+```
+
+This configuration exposes only the three read-only session inspection tools and blocks everything else — useful for automated pipelines or auditing scenarios where write operations must be prevented.
+
 ### Error handling
 
 - If `sessionAgentToolsSettingsV1` is **absent or malformed**, the CLI silently falls back to defaults (all tools enabled). The daemon will not fail to start.
@@ -175,7 +198,7 @@ Tool filtering is implemented entirely in the CLI (`apps/cli/`). The relay serve
 
 The following four-step sequence runs at daemon startup:
 
-1. **Read settings** — `apps/cli/src/mcp/startHappyServer.ts` calls `readSettings()`, then passes the result to `readSessionAgentToolsSettingsV1(settings)` and `buildIsSessionAgentToolEnabled(toolsSettings)` to produce the `isSessionAgentToolEnabled` predicate. This happens once; the predicate is reused for every subsequent MCP request.
+1. **Read settings** — `apps/cli/src/mcp/startHappyServer.ts` calls `readSettings()`, then passes the result to `readSessionAgentToolsSettings(settings)` and `buildIsSessionAgentToolEnabled(toolsSettings)` to produce the `isSessionAgentToolEnabled` predicate. This happens once; the predicate is reused for every subsequent MCP request.
 
 2. **Warn on unknown names** — `findUnknownSessionAgentToolNames(toolsSettings, allKnownNames)` is called against the full unfiltered tool catalog. Any unrecognized tool names emit `logger.warn` at startup. The daemon continues normally.
 
@@ -185,22 +208,35 @@ The following four-step sequence runs at daemon startup:
 
 ### Schema reader contract
 
-`readSessionAgentToolsSettingsV1` in `apps/cli/src/settings/sessionAgentToolsSettings.ts` **never throws**. Its behavior on edge cases:
+`readSessionAgentToolsSettings` in `apps/cli/src/settings/sessionAgentToolsSettings.ts` **never throws**. Its behavior on edge cases:
 
 - Absent key → returns `DEFAULT_SESSION_AGENT_TOOLS_SETTINGS` (`{ v: 1, tools: {} }`) silently.
 - Zod parse failure → returns the same default and emits `logger.warn`.
 
-Callers can rely on always receiving a valid `SessionAgentToolsSettingsV1` object.
+Callers can rely on always receiving a valid `SessionAgentToolsSettings` object.
 
 ### Predicate logic
 
-The predicate built by `buildIsSessionAgentToolEnabled` is:
+The predicate built by `buildIsSessionAgentToolEnabled` uses a three-level lookup:
 
 ```typescript
-(toolName) => settings.tools[toolName]?.enabled !== false
+export function buildIsSessionAgentToolEnabled(
+    settings: SessionAgentToolsSettings,
+): (toolName: string) => boolean {
+    return (toolName: string) => {
+        const perTool = settings.tools[toolName];
+        if (perTool !== undefined) {
+            return perTool.enabled;
+        }
+        return settings.default ?? true;
+    };
+}
 ```
 
-This is the opt-out model: anything not explicitly set to `false` (including missing entries) is treated as enabled.
+Lookup order:
+1. **Per-tool entry** — if `settings.tools[toolName]` exists, its `enabled` field is authoritative.
+2. **Global default** — if no per-tool entry exists, fall back to `settings.default`.
+3. **Hardcoded fallback** — if `settings.default` is also absent, return `true` (backward-compatible opt-out model).
 
 ### Settings field location
 
@@ -210,7 +246,7 @@ The field is declared in the `Settings` interface in `apps/cli/src/persistence.t
 sessionAgentToolsSettingsV1?: unknown;
 ```
 
-It is typed as `unknown` to decouple the persistence layer from the settings schema version. Always access it through `readSessionAgentToolsSettingsV1(settings)` — never cast or read the raw field directly.
+It is typed as `unknown` to decouple the persistence layer from the settings schema version. Always access it through `readSessionAgentToolsSettings(settings)` — never cast or read the raw field directly.
 
 ### Adding a new filterable tool
 

@@ -9,7 +9,7 @@ import type { Metadata } from "@/api/types";
 import { configuration } from "@/configuration";
 import type { Credentials } from '@/persistence';
 import { readSettings } from '@/persistence';
-import { readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled, findUnknownSessionAgentToolNames } from '@/settings/sessionAgentToolsSettings';
+import { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled, findUnknownSessionAgentToolNames } from '@/settings/sessionAgentToolsSettings';
 import type { ExecutionRunServiceResult } from "@/session/services/executionRuns";
 
 export type HappyMcpExecutionRunService = Readonly<{
@@ -37,7 +37,7 @@ export async function startHappyServer(
 ) {
     // Read settings once at startup (STARTUP-01); predicate is computed here and reused per-request.
     const settings = await readSettings();
-    const toolsSettings = readSessionAgentToolsSettingsV1(settings);
+    const toolsSettings = readSessionAgentToolsSettings(settings);
     const isSessionAgentToolEnabled = buildIsSessionAgentToolEnabled(toolsSettings);
 
     // Warn on unknown tool names at startup (VALID-01). Uses unfiltered catalog so that
@@ -107,7 +107,7 @@ export async function startHappyServer(
             }
 
             try {
-                await Promise.resolve(mcp.close());
+                await mcp.close();
             } catch (error) {
                 logger.debug('[happierMCP] Error closing server:', error);
             }
@@ -131,8 +131,10 @@ export async function startHappyServer(
         }
     });
 
-    const baseUrl = await new Promise<URL>((resolve) => {
+    const baseUrl = await new Promise<URL>((resolve, reject) => {
+        server.once('error', reject);
         server.listen(0, "127.0.0.1", () => {
+            server.removeListener('error', reject);
             const addr = server.address() as AddressInfo;
             resolve(new URL(`http://127.0.0.1:${addr.port}`));
         });
