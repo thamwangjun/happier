@@ -64,6 +64,15 @@ async function main() {
     version: '1.0.0',
   });
 
+  // Parse the enabled-tools allowlist passed by the daemon via env var (TOOL-FILTER-01).
+  // Absent or empty → all tools enabled (backwards-compatible default).
+  const enabledToolsRaw = process.env.HAPPIER_ENABLED_SESSION_AGENT_TOOLS;
+  let isToolEnabled: ((name: string) => boolean) | undefined;
+  if (enabledToolsRaw !== undefined && enabledToolsRaw.trim() !== '') {
+    const enabledSet = new Set(enabledToolsRaw.split(',').map((s) => s.trim()).filter(Boolean));
+    isToolEnabled = (name: string) => enabledSet.has(name);
+  }
+
   registerHappierMcpBridgeTools(server as any, {
     callHttpTool: async (name, args) => {
       const client = await ensureHttpClient();
@@ -73,6 +82,7 @@ async function main() {
           : undefined;
       return await client.callTool({ name, arguments: toolArgs });
     },
+    isToolEnabled,
   });
   registerHappierMcpResources(server as any, {
     isActionEnabled: (id) => isActionEnabledByEnv(id, { surface: 'session_agent' }),
