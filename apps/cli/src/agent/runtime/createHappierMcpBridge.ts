@@ -44,8 +44,16 @@ export async function createHappierMcpBridgeWithOptions(
     credentials: opts.credentials ?? null,
   })
   const commandMode = opts.commandMode ?? 'direct-script'
+  const bridgeConfig = await resolveHappierMcpServerConfig(happierMcpServer.url, commandMode)
   const mcpServers: Record<string, McpServerConfig> = {
-    happier: await resolveHappierMcpServerConfig(happierMcpServer.url, commandMode),
+    happier: {
+      ...bridgeConfig,
+      env: {
+        ...bridgeConfig.env,
+        // Forward the already-filtered tool list so the STDIO bridge registers only enabled tools (TOOL-FILTER-01).
+        HAPPIER_ENABLED_SESSION_AGENT_TOOLS: happierMcpServer.toolNames.join(','),
+      },
+    },
   }
 
   return {

@@ -8,8 +8,11 @@ export function registerHappierMcpBridgeTools(
   server: ToolRegistrar,
   deps: Readonly<{
     callHttpTool: (name: string, args: unknown) => Promise<any>;
+    isToolEnabled?: (name: string) => boolean;
   }>,
 ): void {
+  const isToolEnabled = deps.isToolEnabled ?? (() => true);
+
   const forward = (name: string) => async (args: any) => {
     try {
       return await deps.callHttpTool(name, args);
@@ -24,6 +27,8 @@ export function registerHappierMcpBridgeTools(
   };
 
   for (const tool of listBuiltInHappierTools({ surface: 'session_agent' })) {
+    if (!isToolEnabled(tool.name)) continue;
+
     const meta = {
       description: tool.description,
       title: tool.title,

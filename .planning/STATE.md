@@ -5,7 +5,7 @@ milestone_name: Session Agent Tools — Global Default
 status: milestone_archived
 stopped_at: Milestone v1.1 archived — planning next milestone
 last_updated: "2026-04-22T12:45:00.000Z"
-last_activity: 2026-04-22 -- Milestone v1.1 archived (10/10 requirements, 2 phases, 2 plans)
+last_activity: 2026-04-30 - Completed quick task 260430-g1i: Gain context, and commit all unstaged uncommitted changes.
 progress:
   total_phases: 2
   completed_phases: 2
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: — (all phases complete)
 Status: Milestone v1.1 archived
-Last activity: 2026-04-22
+Last activity: 2026-04-30
 
 Progress: [██████████] 100%
 
@@ -79,6 +79,8 @@ Recent decisions affecting current work:
 | 260420-luh | Fix invalid tool names in Example D of docs/mcp-tool-filtering.md | 2026-04-20 | 0f0d6d3f9 | [260420-luh-fix-invalid-tool-names-in-example-d-of-d](./quick/260420-luh-fix-invalid-tool-names-in-example-d-of-d/) |
 | 260420-lzp | Merge thamw-mcp-config into this branch | 2026-04-20 | 735dfb0b4 | [260420-lzp-merge-thamw-mcp-config-into-this-branch](./quick/260420-lzp-merge-thamw-mcp-config-into-this-branch/) |
 | 260430-cdg | Resolve merge conflicts from workspace/thamw-mcp/config-ext1 into thamw-dev | 2026-04-30 | 703c71d49 | [260430-cdg-resolve-merge-conflicts-from-workspace-t](./quick/260430-cdg-resolve-merge-conflicts-from-workspace-t/) |
+| 260430-wbf | Fix STDIO bridge bypassing sessionAgentToolsSettingsV1 tool filter | 2026-04-30 | 65df8a468 | [260430-wbf-fix-stdio-bridge-misses-sessionagenttool](./quick/260430-wbf-fix-stdio-bridge-misses-sessionagenttool/) |
+| 260430-g1i | Gain context, and commit all unstaged uncommitted changes. | 2026-04-30 | 2f7dcdf44 | [260430-g1i-gain-context-and-commit-all-unstaged-unc](./quick/260430-g1i-gain-context-and-commit-all-unstaged-unc/) |
 
 ## Deferred Items
 
