@@ -78,6 +78,7 @@ Recent decisions affecting current work:
 | 260420-iyc | Add disable-all-tools example to docs/mcp-tool-filtering.md | 2026-04-20 | 773b18341 | [260420-iyc-add-disable-all-tools-example-to-docs-mc](./quick/260420-iyc-add-disable-all-tools-example-to-docs-mc/) |
 | 260420-luh | Fix invalid tool names in Example D of docs/mcp-tool-filtering.md | 2026-04-20 | 0f0d6d3f9 | [260420-luh-fix-invalid-tool-names-in-example-d-of-d](./quick/260420-luh-fix-invalid-tool-names-in-example-d-of-d/) |
 | 260420-lzp | Merge thamw-mcp-config into this branch | 2026-04-20 | 735dfb0b4 | [260420-lzp-merge-thamw-mcp-config-into-this-branch](./quick/260420-lzp-merge-thamw-mcp-config-into-this-branch/) |
+| 260430-cdg | Resolve merge conflicts from workspace/thamw-mcp/config-ext1 into thamw-dev | 2026-04-30 | 703c71d49 | [260430-cdg-resolve-merge-conflicts-from-workspace-t](./quick/260430-cdg-resolve-merge-conflicts-from-workspace-t/) |
 
 ## Deferred Items
 
@@ -87,6 +88,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-22
-Stopped at: Milestone v1.1 archived — run /gsd-new-milestone to start next milestone
+Last session: 2026-04-30
+Stopped at: Merged workspace/thamw-mcp/config-ext1 into thamw-dev — planning next milestone
 Resume file: None
