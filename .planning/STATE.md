@@ -5,7 +5,7 @@ milestone_name: Session Agent Tools — Global Default
 status: milestone_archived
 stopped_at: Milestone v1.1 archived — planning next milestone
 last_updated: "2026-04-22T12:45:00.000Z"
-last_activity: 2026-04-30 - Completed quick task 260430-g6v: Merge workspace/thamw-msp-config-ext1 into thamw-dev resolving conflicts
+last_activity: 2026-05-01 - Completed quick task 260501-hv4: Add regression tests for happyMcpStdioBridge tool filter (settings vs env var)
 progress:
   total_phases: 2
   completed_phases: 2
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: — (all phases complete)
 Status: Milestone v1.1 archived
-Last activity: 2026-04-30
+Last activity: 2026-05-01
 
 Progress: [██████████] 100%
 
@@ -82,6 +82,7 @@ Recent decisions affecting current work:
 | 260430-wbf | Fix STDIO bridge bypassing sessionAgentToolsSettingsV1 tool filter | 2026-04-30 | 65df8a468 | [260430-wbf-fix-stdio-bridge-misses-sessionagenttool](./quick/260430-wbf-fix-stdio-bridge-misses-sessionagenttool/) |
 | 260430-g1i | Gain context, and commit all unstaged uncommitted changes. | 2026-04-30 | 2f7dcdf44 | [260430-g1i-gain-context-and-commit-all-unstaged-unc](./quick/260430-g1i-gain-context-and-commit-all-unstaged-unc/) |
 | 260430-g6v | Merge workspace/thamw-msp-config-ext1 into thamw-dev resolving conflicts | 2026-04-30 | 937c76675 | [260430-g6v-merge-workspace-thamw-msp-config-ext1-in](./quick/260430-g6v-merge-workspace-thamw-msp-config-ext1-in/) |
+| 260501-hv4 | Add regression tests for happyMcpStdioBridge tool filter (settings vs env var) | 2026-05-01 | 70d892486 | [260501-hv4-add-regression-tests-for-happymcpstdiobr](./quick/260501-hv4-add-regression-tests-for-happymcpstdiobr/) |
 
 ## Deferred Items
 

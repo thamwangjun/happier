@@ -17,6 +17,8 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { registerHappierMcpBridgeTools } from './registerHappierMcpBridgeTools';
 import { registerHappierMcpResources } from '@/mcp/resources/registerHappierMcpResources';
 import { isActionEnabledByEnv } from '@/settings/actionsSettings';
+import { readSettings } from '@/persistence';
+import { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } from '@/settings/sessionAgentToolsSettings';
 
 function parseArgs(argv: string[]): { url: string | null } {
   let url: string | null = null;
@@ -64,14 +66,9 @@ async function main() {
     version: '1.0.0',
   });
 
-  // Parse the enabled-tools allowlist passed by the daemon via env var (TOOL-FILTER-01).
-  // Absent or empty → all tools enabled (backwards-compatible default).
-  const enabledToolsRaw = process.env.HAPPIER_ENABLED_SESSION_AGENT_TOOLS;
-  let isToolEnabled: ((name: string) => boolean) | undefined;
-  if (enabledToolsRaw !== undefined && enabledToolsRaw.trim() !== '') {
-    const enabledSet = new Set(enabledToolsRaw.split(',').map((s) => s.trim()).filter(Boolean));
-    isToolEnabled = (name: string) => enabledSet.has(name);
-  }
+  const settings = await readSettings();
+  const toolsSettings = readSessionAgentToolsSettings(settings);
+  const isToolEnabled = buildIsSessionAgentToolEnabled(toolsSettings);
 
   registerHappierMcpBridgeTools(server as any, {
     callHttpTool: async (name, args) => {
