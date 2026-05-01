@@ -25,7 +25,9 @@ Extend `sessionAgentToolsSettingsV1` schema with `default?: boolean` and update 
   - `SessionAgentToolsSettingsV1` (type) → `SessionAgentToolsSettings`
   - `readSessionAgentToolsSettingsV1` → `readSessionAgentToolsSettings`
   - All downstream import sites must be updated to use the new names.
-  - The settings.json JSON key (`sessionAgentToolsSettingsV1`) is **not** renamed — it is a user-visible config key and renaming it would break existing configs.
+  - ~~The settings.json JSON key (`sessionAgentToolsSettingsV1`) is **not** renamed — it is a user-visible config key and renaming it would break existing configs.~~ **Superseded by D-06.**
+
+- **D-06 (2026-05-01, supersedes D-03 JSON key exception):** The settings.json JSON key is renamed from `sessionAgentToolsSettingsV1` to `sessionAgentToolsSettings`. The V1 suffix is permanently stripped from all surfaces — TypeScript identifiers, JSON keys, comments, and test data. No migration shim is provided; old configs with `sessionAgentToolsSettingsV1` silently fall through to the permissive default (all tools enabled). Users must update their `~/.happier/settings.json` manually.
 
 ### JSDoc / Comment Framing
 - **D-04:** Frame `default: false` mode as "opt-in mode" in JSDoc and inline comments, consistent with the existing "opt-out model" language already present in the file.
