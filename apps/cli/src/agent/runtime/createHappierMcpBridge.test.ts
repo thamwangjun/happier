@@ -9,6 +9,7 @@ const { requireJavaScriptRuntimeExecutableMock } = vi.hoisted(() => ({
 const { startHappyServerMock } = vi.hoisted(() => ({
   startHappyServerMock: vi.fn(async () => ({
     url: 'http://127.0.0.1:12345',
+    toolNames: ['change_title'],
     stop: vi.fn(),
   })),
 }))
@@ -47,6 +48,7 @@ describe('createHappierMcpBridge', () => {
     startHappyServerMock.mockReset()
     startHappyServerMock.mockResolvedValue({
       url: 'http://127.0.0.1:12345',
+      toolNames: ['change_title'],
       stop: vi.fn(),
     })
   })
@@ -69,6 +71,9 @@ describe('createHappierMcpBridge', () => {
         '--url',
         'http://127.0.0.1:12345',
       ],
+      env: {
+        HAPPIER_ENABLED_SESSION_AGENT_TOOLS: 'change_title',
+      },
     })
   })
 
@@ -90,6 +95,9 @@ describe('createHappierMcpBridge', () => {
         '--url',
         'http://127.0.0.1:12345',
       ],
+      env: {
+        HAPPIER_ENABLED_SESSION_AGENT_TOOLS: 'change_title',
+      },
     })
   })
 
@@ -118,7 +126,7 @@ describe('createHappierMcpBridge', () => {
           '--url',
           'http://127.0.0.1:12345',
         ],
-        env: { TSX_TSCONFIG_PATH: '/repo/tsconfig.json' },
+        env: { TSX_TSCONFIG_PATH: '/repo/tsconfig.json', HAPPIER_ENABLED_SESSION_AGENT_TOOLS: 'change_title' },
       })
     } finally {
       if (previousFlag === undefined) {
@@ -151,7 +159,7 @@ describe('createHappierMcpBridge', () => {
         '--url',
         'http://127.0.0.1:12345',
       ],
-      env: { TSX_TSCONFIG_PATH: '/repo/tsconfig.json' },
+      env: { TSX_TSCONFIG_PATH: '/repo/tsconfig.json', HAPPIER_ENABLED_SESSION_AGENT_TOOLS: 'change_title' },
     })
   })
 
@@ -174,6 +182,9 @@ describe('createHappierMcpBridge', () => {
         '--url',
         'http://127.0.0.1:12345',
       ],
+      env: {
+        HAPPIER_ENABLED_SESSION_AGENT_TOOLS: 'change_title',
+      },
     })
   })
 
@@ -205,5 +216,39 @@ describe('createHappierMcpBridge', () => {
     await createHappierMcpBridge(session, { credentials })
 
     expect(startHappyServerMock).toHaveBeenCalledWith(session, { credentials })
+  })
+
+  it('forwards the filtered tool list as HAPPIER_ENABLED_SESSION_AGENT_TOOLS env var to the STDIO bridge (TOOL-FILTER-01)', async () => {
+    startHappyServerMock.mockResolvedValue({
+      url: 'http://127.0.0.1:12345',
+      toolNames: ['change_title', 'action_execute'],
+      stop: vi.fn(),
+    })
+    vi.mocked(existsSync).mockImplementation((pathLike) => {
+      const path = String(pathLike)
+      return path.endsWith('/package-dist/backends/codex/happyMcpStdioBridge.mjs')
+    })
+
+    const session = {} as any
+    const { mcpServers } = await createHappierMcpBridge(session)
+
+    expect(mcpServers.happier.env?.HAPPIER_ENABLED_SESSION_AGENT_TOOLS).toBe('change_title,action_execute')
+  })
+
+  it('passes an empty string for HAPPIER_ENABLED_SESSION_AGENT_TOOLS when no tools are enabled', async () => {
+    startHappyServerMock.mockResolvedValue({
+      url: 'http://127.0.0.1:12345',
+      toolNames: [],
+      stop: vi.fn(),
+    })
+    vi.mocked(existsSync).mockImplementation((pathLike) => {
+      const path = String(pathLike)
+      return path.endsWith('/package-dist/backends/codex/happyMcpStdioBridge.mjs')
+    })
+
+    const session = {} as any
+    const { mcpServers } = await createHappierMcpBridge(session)
+
+    expect(mcpServers.happier.env?.HAPPIER_ENABLED_SESSION_AGENT_TOOLS).toBe('')
   })
 })
