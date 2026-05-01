@@ -56,7 +56,7 @@
 
 - `default?: boolean` field in `SessionAgentToolsSettingsSchema` using `z.boolean().optional()` — absence distinguishable from explicit `false`
 - 3-level predicate lookup in `buildIsSessionAgentToolEnabled`: per-tool entry → `settings.default` → `true` fallback
-- Renamed all V1-suffixed TypeScript identifiers (JSON key `sessionAgentToolsSettingsV1` preserved for backward compat)
+- Renamed all V1-suffixed TypeScript identifiers (JSON key `sessionAgentToolsSettingsV1` preserved for backward compat at the time — subsequently renamed to `sessionAgentToolsSettings` per D-06, 2026-05-01)
 - `describe('3-level lookup (TEST-01..04)')` block: 4 requirement-labeled tests; total suite 26 passing
 - `docs/mcp-tool-filtering.md`: schema table `default` row, Example E opt-in mode config, corrected stale V1 references
 

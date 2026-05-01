@@ -19,8 +19,8 @@ updated: 2026-05-01
 ## Config Details
 
 - Settings file: `~/.happier/settings.json` (user-level happier settings, NOT ~/.claude/settings.json)
-- Key in use: `sessionAgentToolsSettings` (post-rename, now corrected back to `sessionAgentToolsSettingsV1`)
-- Previous key: `sessionAgentToolsSettingsV1` (pre-rename, and still used by the running daemon)
+- Key in use: `sessionAgentToolsSettings` (D-06 — V1 suffix permanently stripped from all surfaces)
+- Previous key: `sessionAgentToolsSettingsV1` (pre-D-06; the debug session temporarily reverted settings.json to V1 as a workaround, but D-06 makes `sessionAgentToolsSettings` the canonical name)
 - Build status: Full yarn build + daemon restart + npm link reinstall done
 
 ## Evidence
@@ -79,9 +79,11 @@ root_cause: |
   TypeError on .join() — all 6 of 7 env-forwarding-related tests were broken.
 
 fix: |
-  Three changes applied:
-  1. ~/.happier/settings.json: renamed key from sessionAgentToolsSettings back to
-     sessionAgentToolsSettingsV1 to match the development repo daemon source.
+  Three changes applied (note: step 1 was superseded by D-06 — see below):
+  1. [SUPERSEDED BY D-06] ~/.happier/settings.json: debug session temporarily renamed key
+     from sessionAgentToolsSettings back to sessionAgentToolsSettingsV1 as a workaround.
+     D-06 (2026-05-01) reversed this: key is now permanently sessionAgentToolsSettings
+     and the development repo source was updated to match.
   2. Rebuilt development/happier/happier repo (yarn build) so package-dist now
      includes the HAPPIER_ENABLED_SESSION_AGENT_TOOLS env-forwarding code from
      createHappierMcpBridge.ts and the env-var reading code in happyMcpStdioBridge.ts.
@@ -98,6 +100,6 @@ verification: |
   createHappierMcpBridge.test.ts: all 9 tests pass (verified).
 
 files_changed:
-  - /home/thamw/.happier/settings.json (key renamed to sessionAgentToolsSettingsV1)
+  - /home/thamw/.happier/settings.json (temporarily to V1 during debug; reverted to sessionAgentToolsSettings per D-06)
   - /home/thamw/development/happier/happier/ (rebuilt package-dist via yarn build)
   - apps/cli/src/agent/runtime/createHappierMcpBridge.test.ts (mocks fixed, 2 new tests)
