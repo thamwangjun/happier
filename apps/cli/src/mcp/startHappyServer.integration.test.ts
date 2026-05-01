@@ -643,7 +643,7 @@ describe('startHappyServer (MCP integration)', () => {
     }
   });
 
-  describe('sessionAgentToolsSettingsV1 filtering (TOOLS-01)', () => {
+  describe('sessionAgentToolsSettings filtering (TOOLS-01)', () => {
     const envBackup = snapshotEnvValues(['HAPPIER_HOME_DIR', 'HAPPIER_SERVER_URL', 'HAPPIER_WEBAPP_URL']);
     let homeDir: string | undefined;
 
@@ -663,11 +663,11 @@ describe('startHappyServer (MCP integration)', () => {
       if (homeDir) await removeTempDir(homeDir);
     });
 
-    it('hides a tool disabled via sessionAgentToolsSettingsV1 from listTools response', async () => {
+    it('hides a tool disabled via sessionAgentToolsSettings from listTools response', async () => {
       const settings = {
         schemaVersion: 6,
         onboardingCompleted: false,
-        sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
+        sessionAgentToolsSettings: { v: 1, tools: { change_title: { enabled: false } } },
       };
       await writeFile(
         join(homeDir!, 'settings.json'),
@@ -702,7 +702,7 @@ describe('startHappyServer (MCP integration)', () => {
       const settings = {
         schemaVersion: 6,
         onboardingCompleted: false,
-        sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
+        sessionAgentToolsSettings: { v: 1, tools: { change_title: { enabled: false } } },
       };
       await writeFile(
         join(homeDir!, 'settings.json'),
@@ -726,11 +726,11 @@ describe('startHappyServer (MCP integration)', () => {
       }
     });
 
-    it('enables all tools and does not crash when sessionAgentToolsSettingsV1 is corrupt (STARTUP-03)', async () => {
+    it('enables all tools and does not crash when sessionAgentToolsSettings is corrupt (STARTUP-03)', async () => {
       const settings = {
         schemaVersion: 6,
         onboardingCompleted: false,
-        sessionAgentToolsSettingsV1: 'bad_string',
+        sessionAgentToolsSettings: 'bad_string',
       };
       await writeFile(
         join(homeDir!, 'settings.json'),
@@ -787,7 +787,7 @@ describe('startHappyServer (MCP integration)', () => {
     });
   });
 
-  describe('sessionAgentToolsSettingsV1 validation (VALID-01)', () => {
+  describe('sessionAgentToolsSettings validation (VALID-01)', () => {
     const envBackup = snapshotEnvValues(['HAPPIER_HOME_DIR', 'HAPPIER_SERVER_URL', 'HAPPIER_WEBAPP_URL']);
     let homeDir: string | undefined;
 
@@ -811,7 +811,7 @@ describe('startHappyServer (MCP integration)', () => {
       const settings = {
         schemaVersion: 6,
         onboardingCompleted: false,
-        sessionAgentToolsSettingsV1: { v: 1, tools: { 'change-title': { enabled: false }, change_title: { enabled: false } } },
+        sessionAgentToolsSettings: { v: 1, tools: { 'change-title': { enabled: false }, change_title: { enabled: false } } },
       };
       await writeFile(
         join(homeDir!, 'settings.json'),

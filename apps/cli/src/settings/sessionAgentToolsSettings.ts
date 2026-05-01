@@ -2,7 +2,7 @@
  * Session-agent tool enable/disable configuration (CLI-local settings)
  *
  * Defines the SessionAgentToolsSettings schema and reader function.
- * The schema is validated from the `sessionAgentToolsSettingsV1` field in ~/.happier/settings.json.
+ * The schema is validated from the `sessionAgentToolsSettings` field in ~/.happier/settings.json.
  * The reader accepts an already-loaded Settings object (not a file path) so it stays pure
  * and testable without filesystem access.
  */
@@ -28,7 +28,7 @@ export type SessionAgentToolsSettings = z.infer<typeof SessionAgentToolsSettings
 export const DEFAULT_SESSION_AGENT_TOOLS_SETTINGS: Readonly<SessionAgentToolsSettings> = Object.freeze({ v: 1 as const, tools: Object.freeze({}) as Record<string, { enabled: boolean }> });
 
 /**
- * Reads and validates the sessionAgentToolsSettingsV1 field from a Settings object.
+ * Reads and validates the sessionAgentToolsSettings field from a Settings object.
  *
  * Always returns a valid SessionAgentToolsSettings — never throws, never returns null.
  * - Absent key → returns DEFAULT_SESSION_AGENT_TOOLS_SETTINGS (silent, per D-05).
@@ -36,13 +36,13 @@ export const DEFAULT_SESSION_AGENT_TOOLS_SETTINGS: Readonly<SessionAgentToolsSet
  * - Valid payload → returns parsed value.
  */
 export function readSessionAgentToolsSettings(settings: Settings): SessionAgentToolsSettings {
-    const raw = settings.sessionAgentToolsSettingsV1;   // JSON key unchanged per D-03
+    const raw = settings.sessionAgentToolsSettings;
     if (raw === undefined || raw === null) {
         return DEFAULT_SESSION_AGENT_TOOLS_SETTINGS;
     }
     const parsed = SessionAgentToolsSettingsSchema.safeParse(raw);
     if (!parsed.success) {
-        logger.warn(`[sessionAgentToolsSettings] sessionAgentToolsSettingsV1 failed schema validation — using defaults. Error: ${parsed.error.message}`);
+        logger.warn(`[sessionAgentToolsSettings] sessionAgentToolsSettings failed schema validation — using defaults. Error: ${parsed.error.message}`);
         return DEFAULT_SESSION_AGENT_TOOLS_SETTINGS;
     }
     return parsed.data;
