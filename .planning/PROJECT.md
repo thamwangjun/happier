@@ -182,7 +182,8 @@ A developer can start an AI coding session on their machine and seamlessly conti
 | TDD RED→GREEN for turn completion split | Contract established in failing tests before implementation; prevented scope creep and caught TEST-03a double-flush early | ✓ Good — v1.1 |
 | `z.boolean().optional()` without `.default()` for `default` field | Absence is distinguishable from explicit `true` at predicate level — enables clean 3-level fallback | ✓ Good — v1.1 |
 | Predicate fallback `?? true` not `?? false` | Backward-compatible opt-out for all existing users without a `default` field | ✓ Good — v1.1 |
-| JSON key `sessionAgentToolsSettingsV1` not renamed in settings.json | Only TypeScript identifiers renamed; settings file format unchanged for backward compat | ✓ Good — v1.1 |
+| ~~JSON key `sessionAgentToolsSettingsV1` not renamed in settings.json~~ | ~~Only TypeScript identifiers renamed; settings file format unchanged for backward compat~~ — **Superseded by D-06 (2026-05-01)** | ✗ Reversed |
+| JSON key renamed to `sessionAgentToolsSettings` (V1 suffix stripped) | D-06: V1 suffix permanently removed from all surfaces. No migration shim — old key silently falls to permissive default. | ✓ Good — D-06 |
 | 3-level lookup tests as sibling `describe` block (not nested) | Explicit requirement traceability (TEST-01..04 labels) without restructuring existing test suite | ✓ Good — v1.1 |
 
 ## Evolution

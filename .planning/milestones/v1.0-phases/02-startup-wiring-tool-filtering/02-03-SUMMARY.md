@@ -3,6 +3,7 @@ phase: 02-startup-wiring-tool-filtering
 plan: "03"
 subsystem: cli-mcp
 tags: [integration-test, mcp, tool-filtering, TOOLS-01, STARTUP-02]
+note_d06: "All references to sessionAgentToolsSettingsV1 in this summary are historical. The JSON key was renamed to sessionAgentToolsSettings per D-06 (2026-05-01)."
 dependency_graph:
   requires:
     - 02-01 (sessionAgentToolsSettings exports: readSessionAgentToolsSettingsV1, buildIsSessionAgentToolEnabled)
