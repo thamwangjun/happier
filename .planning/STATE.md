@@ -79,7 +79,7 @@ Recent decisions affecting current work:
 | 260420-luh | Fix invalid tool names in Example D of docs/mcp-tool-filtering.md | 2026-04-20 | 0f0d6d3f9 | [260420-luh-fix-invalid-tool-names-in-example-d-of-d](./quick/260420-luh-fix-invalid-tool-names-in-example-d-of-d/) |
 | 260430-wbf | Fix STDIO bridge bypassing sessionAgentToolsSettingsV1 tool filter | 2026-04-30 | 65df8a468 | [260430-wbf-fix-stdio-bridge-misses-sessionagenttool](./quick/260430-wbf-fix-stdio-bridge-misses-sessionagenttool/) |
 | 260430-g1i | Gain context, and commit all unstaged uncommitted changes. | 2026-04-30 | 2f7dcdf44 | [260430-g1i-gain-context-and-commit-all-unstaged-unc](./quick/260430-g1i-gain-context-and-commit-all-unstaged-unc/) |
-| 260501-hv4 | Add regression tests for happyMcpStdioBridge tool filter (settings vs env var) | 2026-05-01 | — | [260501-hv4-add-regression-tests-for-happymcpstdiobr](./quick/260501-hv4-add-regression-tests-for-happymcpstdiobr/) |
+| 260501-hv4 | Add regression tests for happyMcpStdioBridge tool filter (settings vs env var) | 2026-05-01 | 70d892486 | [260501-hv4-add-regression-tests-for-happymcpstdiobr](./quick/260501-hv4-add-regression-tests-for-happymcpstdiobr/) |
 
 ## Deferred Items
 
