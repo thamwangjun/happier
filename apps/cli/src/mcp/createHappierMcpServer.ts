@@ -159,7 +159,7 @@ export function createHappierMcpServer(
 
   const executor = harness.executor;
 
-  // resources use their own isActionEnabled callback — not subject to sessionAgentToolsSettingsV1 filtering
+  // resources use their own isActionEnabled callback — not subject to sessionAgentToolsSettings filtering
   registerHappierMcpResources(mcp as any, {
     surface: toolSurface,
     isActionEnabled: (id) => isActionEnabledByEnv(id, { surface: toolSurface }),

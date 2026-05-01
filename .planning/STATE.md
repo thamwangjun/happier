@@ -5,7 +5,7 @@ milestone_name: Session Agent Tools — Global Default
 status: milestone_archived
 stopped_at: Milestone v1.1 archived — planning next milestone
 last_updated: "2026-04-22T12:45:00.000Z"
-last_activity: 2026-04-22 -- Merged workspace/thamw-mcp-config-ext1 into thamw-mcp-config (quick task 260422-i1c)
+last_activity: 2026-05-01 - Completed quick task 260501-hv4: Add regression tests for happyMcpStdioBridge tool filter (settings vs env var)
 progress:
   total_phases: 2
   completed_phases: 2
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 
 Phase: — (all phases complete)
 Status: Milestone v1.1 archived
-Last activity: 2026-04-22
+Last activity: 2026-04-30
 
 Progress: [██████████] 100%
 
@@ -78,6 +78,9 @@ Recent decisions affecting current work:
 | 260420-iyc | Add disable-all-tools example to docs/mcp-tool-filtering.md | 2026-04-20 | 773b18341 | [260420-iyc-add-disable-all-tools-example-to-docs-mc](./quick/260420-iyc-add-disable-all-tools-example-to-docs-mc/) |
 | 260420-luh | Fix invalid tool names in Example D of docs/mcp-tool-filtering.md | 2026-04-20 | 0f0d6d3f9 | [260420-luh-fix-invalid-tool-names-in-example-d-of-d](./quick/260420-luh-fix-invalid-tool-names-in-example-d-of-d/) |
 | 260422-i1c | Merge workspace/thamw-mcp-config-ext1 into thamw-mcp-config | 2026-04-22 | 15f772c09 | [260422-i1c-merge-worktree-thamw-mcp-config-ext1-int](./quick/260422-i1c-merge-worktree-thamw-mcp-config-ext1-int/) |
+| 260430-wbf | Fix STDIO bridge bypassing sessionAgentToolsSettingsV1 tool filter | 2026-04-30 | 65df8a468 | [260430-wbf-fix-stdio-bridge-misses-sessionagenttool](./quick/260430-wbf-fix-stdio-bridge-misses-sessionagenttool/) |
+| 260430-g1i | Gain context, and commit all unstaged uncommitted changes. | 2026-04-30 | 2f7dcdf44 | [260430-g1i-gain-context-and-commit-all-unstaged-unc](./quick/260430-g1i-gain-context-and-commit-all-unstaged-unc/) |
+| 260501-hv4 | Add regression tests for happyMcpStdioBridge tool filter (settings vs env var) | 2026-05-01 | 70d892486 | [260501-hv4-add-regression-tests-for-happymcpstdiobr](./quick/260501-hv4-add-regression-tests-for-happymcpstdiobr/) |
 
 ## Deferred Items
 

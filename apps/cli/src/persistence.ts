@@ -115,7 +115,7 @@ export interface Settings {
    * Parsed/normalized by `settings/sessionAgentToolsSettings.ts`.
    * Stored as raw JSON — always access via `readSessionAgentToolsSettings(settings)`.
    */
-  sessionAgentToolsSettingsV1?: unknown;
+  sessionAgentToolsSettings?: unknown;
 }
 
 const defaultSettings: Settings = {

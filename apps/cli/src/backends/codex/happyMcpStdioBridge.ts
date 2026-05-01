@@ -17,6 +17,8 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { registerHappierMcpBridgeTools } from './registerHappierMcpBridgeTools';
 import { registerHappierMcpResources } from '@/mcp/resources/registerHappierMcpResources';
 import { isActionEnabledByEnv } from '@/settings/actionsSettings';
+import { readSettings } from '@/persistence';
+import { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } from '@/settings/sessionAgentToolsSettings';
 
 function parseArgs(argv: string[]): { url: string | null } {
   let url: string | null = null;
@@ -64,6 +66,10 @@ async function main() {
     version: '1.0.0',
   });
 
+  const settings = await readSettings();
+  const toolsSettings = readSessionAgentToolsSettings(settings);
+  const isToolEnabled = buildIsSessionAgentToolEnabled(toolsSettings);
+
   registerHappierMcpBridgeTools(server as any, {
     callHttpTool: async (name, args) => {
       const client = await ensureHttpClient();
@@ -73,6 +79,7 @@ async function main() {
           : undefined;
       return await client.callTool({ name, arguments: toolArgs });
     },
+    isToolEnabled,
   });
   registerHappierMcpResources(server as any, {
     isActionEnabled: (id) => isActionEnabledByEnv(id, { surface: 'session_agent' }),
