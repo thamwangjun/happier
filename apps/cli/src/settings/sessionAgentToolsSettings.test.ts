@@ -13,23 +13,23 @@ describe('sessionAgentToolsSettings', () => {
         vi.resetModules();
     });
 
-    it('returns default when sessionAgentToolsSettingsV1 key is absent', async () => {
+    it('returns default when sessionAgentToolsSettings key is absent', async () => {
         const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
         const result = readSessionAgentToolsSettings({} as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
         expect(result).toEqual({ v: 1, tools: {} });
     });
 
-    it('returns default when sessionAgentToolsSettingsV1 is undefined', async () => {
+    it('returns default when sessionAgentToolsSettings is undefined', async () => {
         const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettingsV1: undefined } as any);
+        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettings: undefined } as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
     });
 
     it('parses a valid blob with enabled=false for a named tool', async () => {
         const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
         const result = readSessionAgentToolsSettings({
-            sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
+            sessionAgentToolsSettings: { v: 1, tools: { change_title: { enabled: false } } },
         } as any);
         expect(result.v).toBe(1);
         expect(result.tools['change_title']).toEqual({ enabled: false });
@@ -38,7 +38,7 @@ describe('sessionAgentToolsSettings', () => {
     it('parses a blob missing the v field (v defaults to 1)', async () => {
         const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
         const result = readSessionAgentToolsSettings({
-            sessionAgentToolsSettingsV1: { tools: { change_title: { enabled: true } } },
+            sessionAgentToolsSettings: { tools: { change_title: { enabled: true } } },
         } as any);
         expect(result.v).toBe(1);
         expect(result.tools['change_title']).toEqual({ enabled: true });
@@ -47,7 +47,7 @@ describe('sessionAgentToolsSettings', () => {
     it('parses a blob with unknown top-level keys (forward-compat)', async () => {
         const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
         const result = readSessionAgentToolsSettings({
-            sessionAgentToolsSettingsV1: { v: 1, tools: {}, future_key: true },
+            sessionAgentToolsSettings: { v: 1, tools: {}, future_key: true },
         } as any);
         expect(result.v).toBe(1);
         expect(result.tools).toEqual({});
@@ -58,7 +58,7 @@ describe('sessionAgentToolsSettings', () => {
         const warnSpy = vi.mocked(logger.warn);
         warnSpy.mockClear();
         const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettingsV1: { v: 2 } } as any);
+        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettings: { v: 2 } } as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
         expect(warnSpy).toHaveBeenCalledOnce();
         expect(warnSpy.mock.calls[0]?.[0]).toMatch(/sessionAgentToolsSettings/);
@@ -69,7 +69,7 @@ describe('sessionAgentToolsSettings', () => {
         const warnSpy = vi.mocked(logger.warn);
         warnSpy.mockClear();
         const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS } = await import('./sessionAgentToolsSettings');
-        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettingsV1: { v: 1, tools: 'bad' } } as any);
+        const result = readSessionAgentToolsSettings({ sessionAgentToolsSettings: { v: 1, tools: 'bad' } } as any);
         expect(result).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
         expect(warnSpy).toHaveBeenCalledOnce();
     });
@@ -77,13 +77,13 @@ describe('sessionAgentToolsSettings', () => {
     it('absent tool name in tools map is undefined — opt-out model (SCHEMA-02)', async () => {
         const { readSessionAgentToolsSettings } = await import('./sessionAgentToolsSettings');
         const result = readSessionAgentToolsSettings({
-            sessionAgentToolsSettingsV1: { v: 1, tools: {} },
+            sessionAgentToolsSettings: { v: 1, tools: {} },
         } as any);
         expect(result.tools['change_title']).toBeUndefined();
         expect(result.tools['any_tool']).toBeUndefined();
     });
 
-    it('does not emit logger.warn when sessionAgentToolsSettingsV1 is absent', async () => {
+    it('does not emit logger.warn when sessionAgentToolsSettings is absent', async () => {
         const { logger } = await import('@/ui/logger');
         const warnSpy = vi.mocked(logger.warn);
         warnSpy.mockClear();
@@ -106,7 +106,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: true } } },
+                sessionAgentToolsSettings: { v: 1, tools: { change_title: { enabled: true } } },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(true);
         });
@@ -115,7 +115,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } } },
+                sessionAgentToolsSettings: { v: 1, tools: { change_title: { enabled: false } } },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(false);
         });
@@ -124,7 +124,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: true },
+                sessionAgentToolsSettings: { v: 1, tools: {}, default: true },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(true);
         });
@@ -133,7 +133,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: false },
+                sessionAgentToolsSettings: { v: 1, tools: {}, default: false },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(false);
         });
@@ -142,7 +142,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: {} },
+                sessionAgentToolsSettings: { v: 1, tools: {} },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(true);
         });
@@ -151,7 +151,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: true } }, default: false },
+                sessionAgentToolsSettings: { v: 1, tools: { change_title: { enabled: true } }, default: false },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(true);
         });
@@ -160,7 +160,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: { change_title: { enabled: false } }, default: true },
+                sessionAgentToolsSettings: { v: 1, tools: { change_title: { enabled: false } }, default: true },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('change_title')).toBe(false);
         });
@@ -172,7 +172,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, DEFAULT_SESSION_AGENT_TOOLS_SETTINGS, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: 'bad' },
+                sessionAgentToolsSettings: { v: 1, tools: {}, default: 'bad' },
             } as any);
             expect(settings).toEqual(DEFAULT_SESSION_AGENT_TOOLS_SETTINGS);
             expect(warnSpy).toHaveBeenCalledOnce();
@@ -185,7 +185,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: {} },
+                sessionAgentToolsSettings: { v: 1, tools: {} },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(true);
         });
@@ -194,7 +194,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: {}, default: false },
+                sessionAgentToolsSettings: { v: 1, tools: {}, default: false },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('any_absent_tool')).toBe(false);
         });
@@ -203,7 +203,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: { memory_search: { enabled: true } }, default: false },
+                sessionAgentToolsSettings: { v: 1, tools: { memory_search: { enabled: true } }, default: false },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('memory_search')).toBe(true);
         });
@@ -212,7 +212,7 @@ describe('sessionAgentToolsSettings', () => {
             const { readSessionAgentToolsSettings, buildIsSessionAgentToolEnabled } =
                 await import('./sessionAgentToolsSettings');
             const settings = readSessionAgentToolsSettings({
-                sessionAgentToolsSettingsV1: { v: 1, tools: { memory_search: { enabled: false } }, default: true },
+                sessionAgentToolsSettings: { v: 1, tools: { memory_search: { enabled: false } }, default: true },
             } as any);
             expect(buildIsSessionAgentToolEnabled(settings)('memory_search')).toBe(false);
         });

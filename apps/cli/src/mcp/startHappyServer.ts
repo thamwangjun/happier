@@ -46,7 +46,7 @@ export async function startHappyServer(
     const unknownNames = findUnknownSessionAgentToolNames(toolsSettings, allKnownNames);
     if (unknownNames.length > 0) {
         logger.warn(
-            `[sessionAgentToolsSettings] Unknown tool names in sessionAgentToolsSettingsV1: ` +
+            `[sessionAgentToolsSettings] Unknown tool names in sessionAgentToolsSettings: ` +
             `${JSON.stringify(unknownNames)} — these will be ignored. ` +
             `Valid tool names: ${JSON.stringify(allKnownNames)}`,
         );
